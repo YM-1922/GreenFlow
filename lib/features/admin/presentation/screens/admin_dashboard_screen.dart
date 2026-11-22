@@ -3,15 +3,15 @@ import '../../../../app/routes/app_routes.dart';
 import '../../../../core/auth/auth.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
-import '../../../../core/widgets/status_badge.dart';
-import '../../../farms/data/datasources/farms_mock_data_source.dart';
-import '../../../farms/domain/entities/farm_entities.dart';
 import '../../../finance/data/datasources/finance_mock_data_source.dart';
-import '../../../finance/domain/entities/finance_entities.dart';
 
-/// Comprehensive Enterprise Super Admin Operations Center & Dashboard.
-/// Redesigned with executive KPIs, actionable triage queue, visual analytics,
-/// real-time system activities, farmer onboarding verification, and complete user RBAC management.
+/// Complete Super Admin Operations Portal & Unified Management System.
+/// Built strictly following Reference Image 2:
+/// - Tab 0: الرئيسية (Home / Executive Overview & System Health)
+/// - Tab 1: المزارع (Farms Management)
+/// - Tab 2: المستخدمون (User Management)
+/// - Tab 3: الأجهزة (IoT Hardware Nodes Management)
+/// - Tab 4: المزيد (More Hub: Subscriptions, Analytics, Notifications, System Settings)
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -19,22 +19,28 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  int _currentTabIndex = 0;
   final AuthService _authService = AuthService();
-  final FarmsMockDataSource _farmsDataSource = FarmsMockDataSource();
   final FinanceMockDataSource _financeDataSource = FinanceMockDataSource();
 
-  // Search & Filters state
-  String _userSearchQuery = '';
-  UserRole? _userRoleFilter;
-  String _farmerSearchQuery = '';
+  // Filter states
+  String _farmFilter = 'الكل';
+  String _userFilter = 'الكل';
+  String _deviceFilter = 'الكل';
+  String _alertFilter = 'الكل';
+  String _moreSubModule = 'subscriptions'; // subscriptions | analytics | alerts | settings
+  final String _analyticsTimeframe = 'آخر 30 يوم';
+  String _analyticsSubTab = 'عام';
+
+  // Search queries
+  String _farmSearch = '';
+  String _userSearch = '';
+  String _deviceSearch = '';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
     _authService.addListener(_onDataChanged);
     _financeDataSource.addListener(_onDataChanged);
   }
@@ -43,7 +49,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   void dispose() {
     _authService.removeListener(_onDataChanged);
     _financeDataSource.removeListener(_onDataChanged);
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -51,315 +56,80 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     if (mounted) setState(() {});
   }
 
-  void _openCreateAccountDialog() {
-    final isAr = AppStrings.isArabic(context);
-    final usernameCtrl = TextEditingController();
-    final nameCtrl = TextEditingController();
-    final emailCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-    var selectedRole = UserRole.technician;
-    final tempPassword = 'GF@${DateTime.now().millisecond}Temp';
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryGreen.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.person_add_rounded, color: AppColors.primaryGreen, size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    isAr ? 'إنشاء حساب جديد بواسطة الإدارة' : 'Create Internal User Account',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: usernameCtrl,
-                    decoration: InputDecoration(
-                      labelText: isAr ? 'اسم المستخدم' : 'Username',
-                      prefixIcon: const Icon(Icons.alternate_email_rounded, size: 20),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: nameCtrl,
-                    decoration: InputDecoration(
-                      labelText: isAr ? 'الاسم الكامل' : 'Full Name',
-                      prefixIcon: const Icon(Icons.badge_rounded, size: 20),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: isAr ? 'البريد الإلكتروني' : 'Email Address',
-                      prefixIcon: const Icon(Icons.mail_outline_rounded, size: 20),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: phoneCtrl,
-                    keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(
-                      labelText: isAr ? 'رقم الهاتف' : 'Phone Number',
-                      prefixIcon: const Icon(Icons.phone_rounded, size: 20),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  DropdownButtonFormField<UserRole>(
-                    initialValue: selectedRole,
-                    decoration: InputDecoration(
-                      labelText: isAr ? 'الدور الوظيفي' : 'Role Assignment',
-                      prefixIcon: const Icon(Icons.security_rounded, size: 20),
-                    ),
-                    items: [
-                      UserRole.technician,
-                      UserRole.farmWorker,
-                      UserRole.financeManager,
-                      UserRole.farmOwner,
-                    ].map((r) {
-                      return DropdownMenuItem(
-                        value: r,
-                        child: Text(isAr ? r.labelAr : r.labelEn, style: const TextStyle(fontSize: 13)),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setDialogState(() => selectedRole = val);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryGreen.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.key_rounded, size: 18, color: AppColors.primaryGreen),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isAr ? 'كلمة المرور المؤقتة للنظام' : 'Temporary System Password',
-                                style: const TextStyle(fontSize: 10, color: Colors.grey),
-                              ),
-                              Text(
-                                tempPassword,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(isAr ? 'إلغاء' : 'Cancel'),
-              ),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryGreen,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                icon: const Icon(Icons.check_rounded, size: 18),
-                onPressed: () {
-                  if (usernameCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty) return;
-
-                  _authService.createAccountByAdmin(
-                    username: usernameCtrl.text.trim(),
-                    nameEn: nameCtrl.text.trim(),
-                    nameAr: nameCtrl.text.trim(),
-                    email: emailCtrl.text.trim(),
-                    phone: phoneCtrl.text.trim(),
-                    role: selectedRole,
-                    initialPassword: tempPassword,
-                  );
-
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        isAr
-                            ? 'تم إنشاء الحساب بنجاح. كلمة المرور المؤقتة: $tempPassword'
-                            : 'Account created. Temp password: $tempPassword',
-                      ),
-                      backgroundColor: AppColors.primaryGreen,
-                    ),
-                  );
-                },
-                label: Text(isAr ? 'إنشاء الحساب' : 'Create Account'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isAr = AppStrings.isArabic(context);
 
-    // Live Data Extraction
-    final allAccounts = _authService.allAccounts;
-    final farmers = allAccounts.where((a) => a.role == UserRole.farmOwner).toList();
-    final technicians = allAccounts.where((a) => a.role == UserRole.technician).toList();
-    final workers = allAccounts.where((a) => a.role == UserRole.farmWorker).toList();
-    final pendingFarmers = farmers.where((a) => a.isPending).toList();
-    final approvedFarmers = farmers.where((a) => a.status == AccountStatus.approved).toList();
-
-    final activeFarms = _farmsDataSource.getFarms();
-    final quotations = _financeDataSource.quotations;
-    final inspections = _farmsDataSource.getInspectionRequests();
-
-    // Metric Calculations
-    final pendingInspections = inspections.where((i) => i.status == InspectionStatus.pending).toList();
-    final scheduledInspections = inspections.where((i) => i.status == InspectionStatus.scheduled).toList();
-    final inReviewInspections = inspections.where((i) => i.status == InspectionStatus.underReview || i.status == InspectionStatus.quotationPending).toList();
-    final completedInspections = inspections.where((i) => i.status == InspectionStatus.approved || i.status == InspectionStatus.inspectionCompleted).toList();
-
-    final pendingQuotations = quotations.where((q) => q.status == QuotationStatus.pendingApproval || q.status == QuotationStatus.sentToFarmer).toList();
-    final acceptedQuotations = quotations.where((q) => q.status == QuotationStatus.accepted).toList();
-
-    // Aggregated Request Pipeline Numbers
-    final newRequestsCount = pendingFarmers.length + pendingInspections.length;
-    final inProgressRequestsCount = scheduledInspections.length + inReviewInspections.length;
-    final pendingRequestsCount = pendingFarmers.length + pendingInspections.length + pendingQuotations.length;
-    final completedRequestsCount = completedInspections.length + acceptedQuotations.length;
-
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-      appBar: AppBar(
-        title: Text(
-          isAr ? 'لوحة إدارة النظام العامة' : 'Super Admin Management Console',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.analytics_outlined),
-            tooltip: isAr ? 'التحليلات الزراعية' : 'Analytics',
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.analytics),
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_add_rounded),
-            tooltip: isAr ? 'إنشاء حساب جديد' : 'Create Account',
-            onPressed: _openCreateAccountDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: isAr ? 'خروج' : 'Logout',
-            onPressed: () {
-              _authService.logout();
-              Navigator.of(context).pushReplacementNamed(AppRoutes.login);
-            },
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.primaryGreen,
-          indicatorWeight: 3,
-          labelColor: AppColors.primaryGreen,
-          unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-          isScrollable: true,
-          tabs: [
-            Tab(
-              icon: const Icon(Icons.dashboard_rounded, size: 20),
-              text: isAr ? 'المؤشرات والعمليات' : 'KPIs & Overview',
-            ),
-            Tab(
-              icon: Badge(
-                isLabelVisible: pendingFarmers.isNotEmpty,
-                label: Text('${pendingFarmers.length}'),
-                backgroundColor: AppColors.sensorWarning,
-                child: const Icon(Icons.hourglass_top_rounded, size: 20),
-              ),
-              text: isAr
-                  ? 'طلبات المزارعين المعلقة (${pendingFarmers.length})'
-                  : 'Pending Farmers (${pendingFarmers.length})',
-            ),
-            Tab(
-              icon: const Icon(Icons.supervised_user_circle_rounded, size: 20),
-              text: isAr ? 'دليل المستخدمين والصلاحيات' : 'User Directory',
-            ),
-            Tab(
-              icon: const Icon(Icons.agriculture_rounded, size: 20),
-              text: isAr ? 'العمليات والتركيبات' : 'Field Operations',
-            ),
+      backgroundColor: isDark ? AppColors.backgroundDark : const Color(0xFFF8FAF7),
+      body: SafeArea(
+        child: IndexedStack(
+          index: _currentTabIndex,
+          children: [
+            _buildHomeTab(isDark, isAr),
+            _buildFarmsTab(isDark, isAr),
+            _buildUsersTab(isDark, isAr),
+            _buildDevicesTab(isDark, isAr),
+            _buildMoreTab(isDark, isAr),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // TAB 1: EXECUTIVE OVERVIEW, KPIS, TRIAGE QUEUE, ANALYTICS & ACTIVITY
-          _buildOverviewTab(
-            isDark: isDark,
-            isAr: isAr,
-            allAccounts: allAccounts,
-            farmers: farmers,
-            technicians: technicians,
-            workers: workers,
-            pendingFarmers: pendingFarmers,
-            activeFarms: activeFarms,
-            newRequestsCount: newRequestsCount,
-            inProgressRequestsCount: inProgressRequestsCount,
-            pendingRequestsCount: pendingRequestsCount,
-            completedRequestsCount: completedRequestsCount,
-            pendingInspectionsCount: pendingInspections.length,
-            pendingQuotationsCount: pendingQuotations.length,
-            inspections: inspections,
-            quotations: quotations,
-          ),
+      bottomNavigationBar: _buildAdminBottomNav(isDark, isAr),
+    );
+  }
 
-          // TAB 2: PENDING FARMER ONBOARDING
-          _buildPendingFarmersTab(
-            isDark: isDark,
-            isAr: isAr,
-            pendingFarmers: pendingFarmers,
+  // =========================================================================
+  // ADMIN BOTTOM NAVIGATION BAR (Matches Reference Image 2)
+  // =========================================================================
+  Widget _buildAdminBottomNav(bool isDark, bool isAr) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F291E) : const Color(0xFF0B3B24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
           ),
-
-          // TAB 3: USER DIRECTORY & ROLE-BASED ACCESS CONTROL
-          _buildUserDirectoryTab(
-            isDark: isDark,
-            isAr: isAr,
-            allAccounts: allAccounts,
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _currentTabIndex,
+        onTap: (index) => setState(() => _currentTabIndex = index),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        selectedItemColor: const Color(0xFF4ADE80), // Bright light emerald
+        unselectedItemColor: Colors.white.withValues(alpha: 0.65),
+        selectedFontSize: 11,
+        unselectedFontSize: 11,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        items: [
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.home_rounded, size: 22),
+            activeIcon: const Icon(Icons.home_rounded, size: 24),
+            label: isAr ? 'الرئيسية' : 'Home',
           ),
-
-          // TAB 4: FIELD OPERATIONS & SITE INSTALLATIONS
-          _buildFieldOperationsTab(
-            isDark: isDark,
-            isAr: isAr,
-            activeFarms: activeFarms,
-            approvedFarmers: approvedFarmers,
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.landscape_rounded, size: 22),
+            activeIcon: const Icon(Icons.landscape_rounded, size: 24),
+            label: isAr ? 'المزارع' : 'Farms',
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.people_alt_rounded, size: 22),
+            activeIcon: const Icon(Icons.people_alt_rounded, size: 24),
+            label: isAr ? 'المستخدمون' : 'Users',
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.memory_rounded, size: 22),
+            activeIcon: const Icon(Icons.memory_rounded, size: 24),
+            label: isAr ? 'الأجهزة' : 'Devices',
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.more_horiz_rounded, size: 22),
+            activeIcon: const Icon(Icons.more_horiz_rounded, size: 24),
+            label: isAr ? 'المزيد' : 'More',
           ),
         ],
       ),
@@ -367,1136 +137,1711 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   // =========================================================================
-  // TAB 1: OVERVIEW, STATS, TRIAGE, VISUAL ANALYTICS, RECENT ACTIVITIES
+  // TAB 0: HOME / EXECUTIVE OVERVIEW & SYSTEM HEALTH (Reference Image 2, Panel 3)
   // =========================================================================
-  Widget _buildOverviewTab({
-    required bool isDark,
-    required bool isAr,
-    required List<UserAccount> allAccounts,
-    required List<UserAccount> farmers,
-    required List<UserAccount> technicians,
-    required List<UserAccount> workers,
-    required List<UserAccount> pendingFarmers,
-    required List<FarmEntity> activeFarms,
-    required int newRequestsCount,
-    required int inProgressRequestsCount,
-    required int pendingRequestsCount,
-    required int completedRequestsCount,
-    required int pendingInspectionsCount,
-    required int pendingQuotationsCount,
-    required List<FarmInspectionRequestEntity> inspections,
-    required List<CommercialQuotation> quotations,
-  }) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWideScreen = constraints.maxWidth >= 720;
-        final gridColumns = isWideScreen ? 4 : 2;
+  Widget _buildHomeTab(bool isDark, bool isAr) {
+    final user = _authService.currentUser;
+    final pendingFarmers = _authService.allAccounts
+        .where((a) => a.status == AccountStatus.pendingApproval)
+        .toList();
 
-        return ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          children: [
-            // SECTION 1: EXECUTIVE STATISTICS CARDS (4 Focused Core Metrics)
-            Row(
+    return RefreshIndicator(
+      color: AppColors.primaryGreen,
+      onRefresh: () async {
+        setState(() {});
+      },
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        children: [
+          // Header: Avatar, Greeting, Notification Bell
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.primaryGreenDark,
+                child: const Icon(Icons.person_rounded, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isAr ? 'مرحباً ${user?.nameAr.split(' ').first ?? 'يوسف'}' : 'Welcome, ${user?.nameEn.split(' ').first ?? 'Youssef'}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1F2937),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isAr ? 'مسؤول النظام الرئيسي' : 'System Super Admin',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Bell icon with badge
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.notifications_none_rounded,
+                      color: isDark ? Colors.white : const Color(0xFF1F2937),
+                      size: 26,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _currentTabIndex = 4;
+                        _moreSubModule = 'alerts';
+                      });
+                    },
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEF4444),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Text(
+                        '1',
+                        style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // 2x2 Core Metrics Grid (Exact values from Reference Image 2)
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.35,
+            children: [
+              _buildRefMetricCard(
+                label: isAr ? 'المزارعين' : 'Farmers',
+                value: '532',
+                growth: '+12%',
+                icon: Icons.people_outline_rounded,
+                isDark: isDark,
+                onTap: () => setState(() => _currentTabIndex = 2),
+              ),
+              _buildRefMetricCard(
+                label: isAr ? 'المزارع' : 'Farms',
+                value: '148',
+                growth: '+8%',
+                icon: Icons.spa_outlined,
+                isDark: isDark,
+                onTap: () => setState(() => _currentTabIndex = 1),
+              ),
+              _buildRefMetricCard(
+                label: isAr ? 'الأجهزة (IoT)' : 'IoT Devices',
+                value: '784',
+                growth: '+15%',
+                icon: Icons.memory_rounded,
+                isDark: isDark,
+                onTap: () => setState(() => _currentTabIndex = 3),
+              ),
+              _buildRefMetricCard(
+                label: isAr ? 'الاشتراكات الفعالة' : 'Active Subscriptions',
+                value: '410',
+                growth: '+9%',
+                icon: Icons.workspace_premium_outlined,
+                isDark: isDark,
+                onTap: () {
+                  setState(() {
+                    _currentTabIndex = 4;
+                    _moreSubModule = 'subscriptions';
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // System Health Section (Exact Match to Reference Image 2: Server, IoT, Database)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 4,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryGreen,
-                    borderRadius: BorderRadius.circular(2),
+                Text(
+                  isAr ? 'حالة الأنظمة' : 'System Health',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF1F2937),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    isAr ? 'نظرة عامة على مؤشرات النظام' : 'System Key Performance Indicators',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                const SizedBox(height: 14),
+                _buildHealthItem(
+                  title: isAr ? 'الخادم (Server)' : 'Server Infrastructure',
+                  status: isAr ? 'يعمل' : 'Operational',
+                  isDark: isDark,
+                ),
+                const Divider(height: 18),
+                _buildHealthItem(
+                  title: isAr ? 'خدمة الأجهزة (IoT)' : 'IoT Telemetry Broker',
+                  status: isAr ? 'يعمل' : 'Operational',
+                  isDark: isDark,
+                ),
+                const Divider(height: 18),
+                _buildHealthItem(
+                  title: isAr ? 'قاعدة البيانات' : 'Primary Database',
+                  status: isAr ? 'يعمل' : 'Operational',
+                  isDark: isDark,
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+          ),
+          const SizedBox(height: 20),
 
-            GridView.count(
-              crossAxisCount: gridColumns,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: isWideScreen ? 1.6 : 1.45,
-              children: [
-                _AdminStatCard(
-                  label: isAr ? 'إجمالي الحسابات' : 'Total Accounts',
-                  value: '${allAccounts.length}',
-                  subText: isAr
-                      ? '${allAccounts.where((a) => a.status == AccountStatus.approved).length} حساب نشط'
-                      : '${allAccounts.where((a) => a.status == AccountStatus.approved).length} active',
-                  icon: Icons.people_alt_rounded,
-                  color: AppColors.primaryGreen,
-                  isDark: isDark,
-                  onTap: () => _tabController.animateTo(2),
-                ),
-                _AdminStatCard(
-                  label: isAr ? 'المزارع النشطة' : 'Active Farms',
-                  value: '${activeFarms.length}',
-                  subText: isAr
-                      ? '${activeFarms.fold<double>(0, (sum, f) => sum + f.area).toStringAsFixed(0)} فدان تحت الإشراف'
-                      : '${activeFarms.fold<double>(0, (sum, f) => sum + f.area).toStringAsFixed(0)} Feddans',
-                  icon: Icons.landscape_rounded,
-                  color: const Color(0xFF10B981),
-                  isDark: isDark,
-                  onTap: () => _tabController.animateTo(3),
-                ),
-                _AdminStatCard(
-                  label: isAr ? 'الطلبات المعلقة' : 'Pending Requests',
-                  value: '$pendingRequestsCount',
-                  subText: isAr ? 'تتطلب تدقيقاً وقراراً' : 'Action required',
-                  icon: Icons.pending_actions_rounded,
-                  color: Colors.redAccent,
-                  isDark: isDark,
-                ),
-                _AdminStatCard(
-                  label: isAr ? 'الطلبات المكتملة' : 'Completed Requests',
-                  value: '$completedRequestsCount',
-                  subText: isAr ? 'معتمدة ومثبتة' : 'Finalized & active',
-                  icon: Icons.task_alt_rounded,
-                  color: const Color(0xFF0D9488),
-                  isDark: isDark,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // SECTION 2: PENDING ACTIONS (ACTION REQUIRED QUEUE)
+          // Pending Farmer Approvals Section (Triage)
+          if (pendingFarmers.isNotEmpty) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 18,
-                        decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(2)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          isAr ? 'الإجراءات المطلوبة' : 'Action Required Queue',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.redAccent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
                   child: Text(
-                    isAr ? '$pendingRequestsCount معلق' : '$pendingRequestsCount pending',
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            _buildActionCard(
-              titleEn: 'Pending Farmer Registrations (${pendingFarmers.length})',
-              titleAr: 'طلبات تسجيل المزارعين الجديدة (${pendingFarmers.length})',
-              subtitleEn: 'New farmer applications waiting for verification, document check, and farm assignment.',
-              subtitleAr: 'مزارعون جدد بانتظار التحقق من المستندات، تخصيص المزرعة، واعتماد الحساب.',
-              priority: isAr ? 'أولوية قصوى / عاجل' : 'High Priority',
-              priorityColor: Colors.redAccent,
-              badgeCount: pendingFarmers.length,
-              actionLabel: isAr ? 'مراجعة واعتماد المزارعين' : 'Review & Approve',
-              onAction: () => _tabController.animateTo(1),
-              isDark: isDark,
-              isAr: isAr,
-            ),
-            const SizedBox(height: 12),
-
-            _buildActionCard(
-              titleEn: 'Inspections Awaiting Scheduling ($pendingInspectionsCount)',
-              titleAr: 'المعاينات الحقلية التي تنتظر الجدولة ($pendingInspectionsCount)',
-              subtitleEn: 'Field assessment visits submitted by farmers needing dispatching and technician assignment.',
-              subtitleAr: 'طلبات فحص تربة ومصادر مياه بحاجة لجدولة موعد وإسناد مهندس ميداني.',
-              priority: isAr ? 'أولوية متوسطة' : 'Medium Priority',
-              priorityColor: Colors.orange,
-              badgeCount: pendingInspectionsCount,
-              actionLabel: isAr ? 'لوحة الفنيين والمعاينات' : 'Open Field Dispatch',
-              onAction: () => Navigator.pushNamed(context, AppRoutes.technicianDashboard),
-              isDark: isDark,
-              isAr: isAr,
-            ),
-            const SizedBox(height: 12),
-
-            _buildActionCard(
-              titleEn: 'Quotations Pending Customer & Admin Audit ($pendingQuotationsCount)',
-              titleAr: 'عروض الأسعار والمقايسات المعلقة ($pendingQuotationsCount)',
-              subtitleEn: 'Commercial proposals, hardware itemization, and VAT invoices awaiting financial clearance.',
-              subtitleAr: 'مقايسات عتاد وحسابات ضريبية 14% جاهزة للمراجعة التجارية والاعتماد المالي.',
-              priority: isAr ? 'إجراء مالي' : 'Commercial Review',
-              priorityColor: const Color(0xFF0284C7),
-              badgeCount: pendingQuotationsCount,
-              actionLabel: isAr ? 'الإدارة المالية والمقايسات' : 'Open Finance Ledger',
-              onAction: () => Navigator.pushNamed(context, AppRoutes.financeDashboard),
-              isDark: isDark,
-              isAr: isAr,
-            ),
-            const SizedBox(height: 28),
-
-            // SECTION 3: VISUAL DASHBOARD ANALYTICS
-            Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: 18,
-                  decoration: BoxDecoration(color: const Color(0xFF8B5CF6), borderRadius: BorderRadius.circular(2)),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    isAr ? 'الإحصائيات والتحليلات' : 'Operations & Activity Analytics',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    isAr ? 'طلبات تسجيل مزارعين معلقة (${pendingFarmers.length})' : 'Pending Registrations (${pendingFarmers.length})',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF1F2937),
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                TextButton(
+                  onPressed: () => setState(() => _currentTabIndex = 2),
+                  child: Text(isAr ? 'عرض الكل' : 'View All', style: const TextStyle(fontSize: 12)),
+                ),
               ],
             ),
-            const SizedBox(height: 14),
-
-            _buildAnalyticsCard(
-              isDark: isDark,
-              isAr: isAr,
-              allAccounts: allAccounts,
-              farmers: farmers,
-              technicians: technicians,
-              workers: workers,
-              activeFarms: activeFarms,
-              completedCount: completedRequestsCount,
-              inProgressCount: inProgressRequestsCount,
-              pendingCount: pendingRequestsCount,
-            ),
-            const SizedBox(height: 20),
-          ],
-        );
-      },
-    );
-  }
-
-  // =========================================================================
-  // SECTION 3 COMPONENT: VISUAL ANALYTICS CARD
-  // =========================================================================
-  Widget _buildAnalyticsCard({
-    required bool isDark,
-    required bool isAr,
-    required List<UserAccount> allAccounts,
-    required List<UserAccount> farmers,
-    required List<UserAccount> technicians,
-    required List<UserAccount> workers,
-    required List<FarmEntity> activeFarms,
-    required int completedCount,
-    required int inProgressCount,
-    required int pendingCount,
-  }) {
-    final totalRequests = completedCount + inProgressCount + pendingCount;
-    final completedPercent = totalRequests > 0 ? (completedCount / totalRequests) : 0.0;
-    final inProgressPercent = totalRequests > 0 ? (inProgressCount / totalRequests) : 0.0;
-    final pendingPercent = totalRequests > 0 ? (pendingCount / totalRequests) : 0.0;
-
-    final solarFarmsCount = activeFarms.where((f) => f.hasSolarPower).length;
-    final solarAdoptionRate = activeFarms.isNotEmpty ? (solarFarmsCount / activeFarms.length) : 0.0;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Sub-header 1: Request Status Breakdown
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                isAr ? 'توزيع مسار الطلبات الحالية' : 'Request Fulfillment Distribution',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              Text(
-                '$totalRequests ${isAr ? 'إجمالي الطلبات' : 'total items'}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Multi-segmented Progress Bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: SizedBox(
-              height: 12,
-              child: Row(
-                children: [
-                  if (completedPercent > 0)
-                    Expanded(
-                      flex: (completedPercent * 100).toInt(),
-                      child: Container(color: AppColors.primaryGreen),
-                    ),
-                  if (inProgressPercent > 0)
-                    Expanded(
-                      flex: (inProgressPercent * 100).toInt(),
-                      child: Container(color: const Color(0xFF6366F1)),
-                    ),
-                  if (pendingPercent > 0)
-                    Expanded(
-                      flex: (pendingPercent * 100).toInt(),
-                      child: Container(color: Colors.redAccent),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Legend for Request Breakdown
-          Wrap(
-            spacing: 12,
-            runSpacing: 6,
-            alignment: WrapAlignment.spaceBetween,
-            children: [
-              _buildLegendPill(
-                color: AppColors.primaryGreen,
-                label: isAr ? 'مكتمل ($completedCount)' : 'Completed ($completedCount)',
-                percent: '${(completedPercent * 100).toStringAsFixed(0)}%',
-              ),
-              _buildLegendPill(
-                color: const Color(0xFF6366F1),
-                label: isAr ? 'قيد التنفيذ ($inProgressCount)' : 'In Progress ($inProgressCount)',
-                percent: '${(inProgressPercent * 100).toStringAsFixed(0)}%',
-              ),
-              _buildLegendPill(
-                color: Colors.redAccent,
-                label: isAr ? 'معلق ($pendingCount)' : 'Pending ($pendingCount)',
-                percent: '${(pendingPercent * 100).toStringAsFixed(0)}%',
-              ),
-            ],
-          ),
-          const Divider(height: 28),
-
-          // Sub-header 2: User Role Distribution
-          Text(
-            isAr ? 'توزيع منظومة المستخدمين حسب الدور' : 'User Ecosystem Role Breakdown',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              Expanded(
-                child: _buildRoleMiniCard(
-                  label: isAr ? 'مزارعون' : 'Farmers',
-                  count: farmers.length,
-                  icon: Icons.person_pin_rounded,
-                  color: AppColors.primaryGreen,
-                  isDark: isDark,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildRoleMiniCard(
-                  label: isAr ? 'فنيون' : 'Technicians',
-                  count: technicians.length,
-                  icon: Icons.engineering_rounded,
-                  color: const Color(0xFF0284C7),
-                  isDark: isDark,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildRoleMiniCard(
-                  label: isAr ? 'عمال' : 'Workers',
-                  count: workers.length,
-                  icon: Icons.handyman_rounded,
-                  color: const Color(0xFFF59E0B),
-                  isDark: isDark,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildRoleMiniCard(
-                  label: isAr ? 'إدارة' : 'Admins',
-                  count: allAccounts.where((a) => a.role == UserRole.superAdmin || a.role == UserRole.financeManager).length,
-                  icon: Icons.security_rounded,
-                  color: const Color(0xFF8B5CF6),
-                  isDark: isDark,
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 28),
-
-          // Sub-header 3: IoT & Agricultural Infrastructure Health
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isAr ? 'اعتماد الطاقة الشمسية بالمزارع' : 'Solar Adoption Rate',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${(solarAdoptionRate * 100).toStringAsFixed(0)}% ($solarFarmsCount/${activeFarms.length})',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFF59E0B)),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isAr ? 'إجمالي المساحة المدارة' : 'Total Managed Acreage',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${activeFarms.fold<double>(0, (s, f) => s + f.area).toStringAsFixed(0)} ${isAr ? 'فدان' : 'Feddans'}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryGreen),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLegendPill({required Color color, required String label, required String percent}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 5),
-        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-        const SizedBox(width: 4),
-        Text('($percent)', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-      ],
-    );
-  }
-
-  Widget _buildRoleMiniCard({
-    required String label,
-    required int count,
-    required IconData icon,
-    required Color color,
-    required bool isDark,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.12 : 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(height: 4),
-          Text('$count', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color)),
-          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey), maxLines: 1),
-        ],
-      ),
-    );
-  }
-
-  // =========================================================================
-  // TAB 2: PENDING FARMER ONBOARDING
-  // =========================================================================
-  Widget _buildPendingFarmersTab({
-    required bool isDark,
-    required bool isAr,
-    required List<UserAccount> pendingFarmers,
-  }) {
-    final filtered = pendingFarmers.where((f) {
-      if (_farmerSearchQuery.isEmpty) return true;
-      final q = _farmerSearchQuery.toLowerCase();
-      return f.nameEn.toLowerCase().contains(q) ||
-          f.nameAr.contains(q) ||
-          f.email.toLowerCase().contains(q) ||
-          f.phone.contains(q);
-    }).toList();
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Tab Header & Search
-        Text(
-          isAr ? 'طلبات تسجيل المزارعين المعلقة' : 'Pending Farmer Onboarding Applications',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          isAr
-              ? 'مراجعة طلبات التسجيل الذاتي، التحقق من المزارعين الجدد وتخصيص المزارع لتفعيل لوحة التحكم.'
-              : 'Review self-registration requests, verify farmer profiles and assign farms for activation.',
-          style: TextStyle(fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-        ),
-        const SizedBox(height: 14),
-
-        TextField(
-          onChanged: (val) => setState(() => _farmerSearchQuery = val),
-          decoration: InputDecoration(
-            hintText: isAr ? 'بحث بالاسم، البريد أو الهاتف...' : 'Search applicant by name, email or phone...',
-            prefixIcon: const Icon(Icons.search_rounded, size: 20),
-            filled: true,
-            fillColor: isDark ? AppColors.cardDark : Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        if (filtered.isEmpty)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 60),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryGreen.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check_circle_outline_rounded, size: 54, color: AppColors.primaryGreen),
+            const SizedBox(height: 8),
+            ...pendingFarmers.map(
+              (farmer) => Card(
+                elevation: 0,
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    isAr ? 'لا توجد طلبات مزارعين معلقة حالياً' : 'All farmer applications have been processed.',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    isAr ? 'تم اعتماد جميع المزارعين وتفعيل حساباتهم بالكامل.' : 'All pending registrations are approved or resolved.',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          ...filtered.map((f) {
-            return Card(
-              margin: const EdgeInsets.only(bottom: 14),
-              color: isDark ? AppColors.cardDark : Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-                side: BorderSide(color: AppColors.sensorWarning.withValues(alpha: 0.4), width: 1.2),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundColor: AppColors.sensorWarning.withValues(alpha: 0.15),
-                          child: Text(
-                            f.nameEn.isNotEmpty ? f.nameEn[0].toUpperCase() : 'F',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.sensorWarning, fontSize: 16),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isAr ? f.nameAr : f.nameEn,
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                '${f.email} • ${f.phone}',
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ),
-                        StatusBadge(
-                          label: isAr ? 'بانتظار الاعتماد' : 'Pending',
-                          color: AppColors.sensorWarning,
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 24),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.redAccent,
-                              side: const BorderSide(color: Colors.redAccent),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            icon: const Icon(Icons.close_rounded, size: 18),
-                            onPressed: () {
-                              _authService.rejectFarmerRegistration(f.id, 'Incomplete verification documents');
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(isAr ? 'تم رفض طلب التسجيل' : 'Registration request declined.'),
-                                  backgroundColor: Colors.redAccent,
-                                ),
-                              );
-                            },
-                            label: Text(isAr ? 'رفض الطلب' : 'Reject'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryGreen,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            icon: const Icon(Icons.check_circle_rounded, size: 18),
-                            onPressed: () {
-                              _authService.approveFarmerRegistration(f.id, assignFarmId: 'farm-001');
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(isAr ? 'تم اعتماد المزارع وتفعيل لوحة التحكم بنجاح' : 'Farmer approved and activated successfully.'),
-                                  backgroundColor: AppColors.primaryGreen,
-                                ),
-                              );
-                            },
-                            label: Text(isAr ? 'قبول واعتماد' : 'Approve & Activate'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                 ),
-              ),
-            );
-          }),
-      ],
-    );
-  }
-
-  // =========================================================================
-  // TAB 3: USER DIRECTORY & ROLE-BASED ACCESS CONTROL
-  // =========================================================================
-  Widget _buildUserDirectoryTab({
-    required bool isDark,
-    required bool isAr,
-    required List<UserAccount> allAccounts,
-  }) {
-    final filtered = allAccounts.where((acc) {
-      if (_userRoleFilter != null && acc.role != _userRoleFilter) return false;
-      if (_userSearchQuery.isEmpty) return true;
-      final q = _userSearchQuery.toLowerCase();
-      return acc.nameEn.toLowerCase().contains(q) ||
-          acc.nameAr.contains(q) ||
-          acc.email.toLowerCase().contains(q) ||
-          acc.username.toLowerCase().contains(q);
-    }).toList();
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Tab Header & Search
-        Text(
-          isAr ? 'دليل المستخدمين والصلاحيات (RBAC)' : 'User Directory & Access Control',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          isAr
-              ? 'إدارة صلاحيات الوصول، تفعيل وتعليق الحسابات، ومتابعة الأدوار الوظيفية في النظام.'
-              : 'Manage permissions, enable or suspend accounts, and audit user roles across Green Flow.',
-          style: TextStyle(fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-        ),
-        const SizedBox(height: 14),
-
-        // Search bar
-        TextField(
-          onChanged: (val) => setState(() => _userSearchQuery = val),
-          decoration: InputDecoration(
-            hintText: isAr ? 'بحث بالاسم، اسم المستخدم أو البريد...' : 'Search by name, username or email...',
-            prefixIcon: const Icon(Icons.search_rounded, size: 20),
-            filled: true,
-            fillColor: isDark ? AppColors.cardDark : Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Role Filter Chips
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              FilterChip(
-                label: Text(isAr ? 'الكل (${allAccounts.length})' : 'All (${allAccounts.length})'),
-                selected: _userRoleFilter == null,
-                onSelected: (_) => setState(() => _userRoleFilter = null),
-                selectedColor: AppColors.primaryGreen.withValues(alpha: 0.2),
-                checkmarkColor: AppColors.primaryGreen,
-              ),
-              const SizedBox(width: 8),
-              FilterChip(
-                label: Text(isAr ? 'مزارعون' : 'Farmers'),
-                selected: _userRoleFilter == UserRole.farmOwner,
-                onSelected: (_) => setState(() => _userRoleFilter = UserRole.farmOwner),
-                selectedColor: AppColors.primaryGreen.withValues(alpha: 0.2),
-              ),
-              const SizedBox(width: 8),
-              FilterChip(
-                label: Text(isAr ? 'فنيون' : 'Technicians'),
-                selected: _userRoleFilter == UserRole.technician,
-                onSelected: (_) => setState(() => _userRoleFilter = UserRole.technician),
-                selectedColor: const Color(0xFF0284C7).withValues(alpha: 0.2),
-              ),
-              const SizedBox(width: 8),
-              FilterChip(
-                label: Text(isAr ? 'عمال' : 'Workers'),
-                selected: _userRoleFilter == UserRole.farmWorker,
-                onSelected: (_) => setState(() => _userRoleFilter = UserRole.farmWorker),
-                selectedColor: const Color(0xFFF59E0B).withValues(alpha: 0.2),
-              ),
-              const SizedBox(width: 8),
-              FilterChip(
-                label: Text(isAr ? 'إدارة عليا' : 'Admins'),
-                selected: _userRoleFilter == UserRole.superAdmin,
-                onSelected: (_) => setState(() => _userRoleFilter = UserRole.superAdmin),
-                selectedColor: const Color(0xFF8B5CF6).withValues(alpha: 0.2),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        ...filtered.map((acc) {
-          final isSuper = acc.role == UserRole.superAdmin;
-          final isActive = acc.status == AccountStatus.approved;
-
-          return Card(
-            margin: const EdgeInsets.only(bottom: 10),
-            color: isDark ? AppColors.cardDark : Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              leading: CircleAvatar(
-                radius: 20,
-                backgroundColor: _getRoleColor(acc.role).withValues(alpha: 0.15),
-                child: Text(
-                  acc.nameEn.isNotEmpty ? acc.nameEn[0].toUpperCase() : 'U',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: _getRoleColor(acc.role)),
-                ),
-              ),
-              title: Text(
-                isAr ? acc.nameAr : acc.nameEn,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('${acc.email} • @${acc.username}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _getRoleColor(acc.role).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            isAr ? acc.role.labelAr : acc.role.labelEn,
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _getRoleColor(acc.role)),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        StatusBadge(
-                          label: isAr ? acc.status.labelAr : acc.status.labelEn,
-                          color: isActive ? AppColors.sensorOnline : (acc.status == AccountStatus.pendingApproval ? AppColors.sensorWarning : Colors.redAccent),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              trailing: isSuper
-                  ? Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text('Protected Admin', style: TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
-                    )
-                  : Switch.adaptive(
-                      value: isActive,
-                      activeTrackColor: AppColors.primaryGreen,
-                      onChanged: (val) {
-                        _authService.setAccountStatus(
-                          acc.id,
-                          val ? AccountStatus.approved : AccountStatus.suspended,
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(val
-                                ? (isAr ? 'تم تفعيل الحساب' : 'Account activated')
-                                : (isAr ? 'تم تعليق الحساب' : 'Account suspended')),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-
-  Color _getRoleColor(UserRole role) {
-    switch (role) {
-      case UserRole.superAdmin:
-        return Colors.redAccent;
-      case UserRole.farmOwner:
-        return AppColors.primaryGreen;
-      case UserRole.technician:
-        return const Color(0xFF0284C7);
-      case UserRole.farmWorker:
-        return const Color(0xFFF59E0B);
-      case UserRole.financeManager:
-        return const Color(0xFF8B5CF6);
-    }
-  }
-
-  // =========================================================================
-  // TAB 4: FIELD OPERATIONS & SITE INSTALLATIONS
-  // =========================================================================
-  Widget _buildFieldOperationsTab({
-    required bool isDark,
-    required bool isAr,
-    required List<FarmEntity> activeFarms,
-    required List<UserAccount> approvedFarmers,
-  }) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text(
-          isAr ? 'المزارع والعمليات الميدانية والتركيبات' : 'Field Installations & Site Surveys',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          isAr
-              ? 'متابعة المزارع النشطة، منظومة الطاقة الشمسية، وحالة ربط المحابس والحساسات الميدانية.'
-              : 'Monitor connected farms, solar microgrid telemetry, and hardware installation progress.',
-          style: TextStyle(fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-        ),
-        const SizedBox(height: 16),
-
-        ...activeFarms.map((farm) {
-          final isSolar = farm.hasSolarPower;
-          final statusColor = farm.installationStatus.color();
-
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            color: isDark ? AppColors.cardDark : Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
                     children: [
                       CircleAvatar(
-                        radius: 20,
-                        backgroundColor: const Color(0xFFE0F2FE),
-                        child: const Icon(Icons.landscape_rounded, color: Color(0xFF0284C7), size: 20),
+                        backgroundColor: const Color(0xFFFEF3C7),
+                        child: const Icon(Icons.person_outline_rounded, color: Color(0xFFD97706), size: 20),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(farm.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                            Text('${farm.location} • ${farm.area} ${farm.areaUnit.labelEn()}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                            Text(
+                              isAr ? farmer.nameAr : farmer.nameEn,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            Text(farmer.phone, style: const TextStyle(fontSize: 11, color: Colors.grey)),
                           ],
                         ),
                       ),
-                      StatusBadge(
-                        label: isAr ? farm.installationStatus.labelAr() : farm.installationStatus.labelEn(),
-                        color: statusColor,
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryGreen,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
+                        ),
+                        onPressed: () {
+                          _authService.approveFarmerRegistration(farmer.id);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(isAr ? 'تمت الموافقة وتفعيل الحساب بنجاح' : 'Farmer approved')),
+                          );
+                        },
+                        child: Text(isAr ? 'موافقة' : 'Approve', style: const TextStyle(fontSize: 11)),
                       ),
                     ],
                   ),
-                  const Divider(height: 20),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(farm.irrigationType.icon(), size: 14, color: AppColors.flowBlue),
-                          const SizedBox(width: 4),
-                          Text(
-                            isAr ? farm.irrigationType.labelAr() : farm.irrigationType.labelEn(),
-                            style: const TextStyle(fontSize: 11),
-                          ),
-                        ],
-                      ),
-                      if (isSolar)
-                        Row(
-                          children: [
-                            const Icon(Icons.solar_power_rounded, size: 14, color: Color(0xFFF59E0B)),
-                            const SizedBox(width: 4),
-                            Text(isAr ? 'طاقة شمسية' : 'Solar Microgrid', style: const TextStyle(fontSize: 11, color: Color(0xFFF59E0B), fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.primaryGreen,
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(50, 30),
-                        ),
-                        icon: const Icon(Icons.arrow_forward_rounded, size: 14),
-                        label: Text(isAr ? 'التفاصيل' : 'Details', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                        onPressed: () => Navigator.pushNamed(context, AppRoutes.farms),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
-          );
-        }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRefMetricCard({
+    required String label,
+    required String value,
+    required String growth,
+    required IconData icon,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: AppColors.primaryGreen, size: 24),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    growth,
+                    style: const TextStyle(
+                      color: Color(0xFF16A34A),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF1F2937),
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHealthItem({
+    required String title,
+    required String status,
+    required bool isDark,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 13,
+            color: isDark ? Colors.white : const Color(0xFF374151),
+          ),
+        ),
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Color(0xFF10B981),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              status,
+              style: const TextStyle(
+                color: Color(0xFF10B981),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
 
   // =========================================================================
-  // HELPER WIDGETS
+  // TAB 1: FARMS MANAGEMENT (Reference Image 2, Panel 4)
   // =========================================================================
-  Widget _buildActionCard({
-    required String titleEn,
-    required String titleAr,
-    required String subtitleEn,
-    required String subtitleAr,
-    required String priority,
-    required Color priorityColor,
-    required int badgeCount,
-    required String actionLabel,
-    required VoidCallback onAction,
-    required bool isDark,
-    required bool isAr,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: priorityColor.withValues(alpha: 0.35)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildFarmsTab(bool isDark, bool isAr) {
+    // Exact cards matching Reference Image 2
+    final List<Map<String, dynamic>> mockFarmsList = [
+      {
+        'name': isAr ? 'مزرعة النور' : 'Al-Nour Farm',
+        'details': isAr ? 'المنيا - 32 فدان' : 'Minya - 32 Feddans',
+        'status': isAr ? 'فعالة' : 'Active',
+        'badgeColor': const Color(0xFF16A34A),
+        'badgeBg': const Color(0xFFDCFCE7),
+      },
+      {
+        'name': isAr ? 'مزرعة الواحة' : 'Al-Waha Farm',
+        'details': isAr ? 'بني سويف - 18 فدان' : 'Beni Suef - 18 Feddans',
+        'status': isAr ? 'فعالة' : 'Active',
+        'badgeColor': const Color(0xFF16A34A),
+        'badgeBg': const Color(0xFFDCFCE7),
+      },
+      {
+        'name': isAr ? 'مزرعة الريان' : 'Al-Rayan Farm',
+        'details': isAr ? 'الفيوم - 25 فدان' : 'Fayoum - 25 Feddans',
+        'status': isAr ? 'تجريبية' : 'Trial',
+        'badgeColor': const Color(0xFFD97706),
+        'badgeBg': const Color(0xFFFEF3C7),
+      },
+      {
+        'name': isAr ? 'مزرعة الخير' : 'Al-Khair Farm',
+        'details': isAr ? 'أسيوط - 40 فدان' : 'Asyut - 40 Feddans',
+        'status': isAr ? 'موقوفة' : 'Suspended',
+        'badgeColor': const Color(0xFFDC2626),
+        'badgeBg': const Color(0xFFFEE2E2),
+      },
+    ];
+
+    final filtered = mockFarmsList.where((f) {
+      final nameStr = f['name'] as String;
+      final detailsStr = f['details'] as String;
+      final matchesSearch = _farmSearch.isEmpty ||
+          nameStr.toLowerCase().contains(_farmSearch.toLowerCase()) ||
+          detailsStr.toLowerCase().contains(_farmSearch.toLowerCase());
+      final matchesFilter = _farmFilter == 'الكل' || f['status'] == _farmFilter;
+      return matchesSearch && matchesFilter;
+    }).toList();
+
+    return Column(
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  isAr ? titleAr : titleEn,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              Text(
+                isAr ? 'إدارة المزارع' : 'Farms Management',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              // Search Field
+              TextField(
+                onChanged: (val) => setState(() => _farmSearch = val),
+                decoration: InputDecoration(
+                  hintText: isAr ? 'بحث باسم المزرعة أو المالك ...' : 'Search farm or owner name...',
+                  hintStyle: const TextStyle(fontSize: 12),
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: priorityColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  priority,
-                  style: TextStyle(color: priorityColor, fontSize: 10, fontWeight: FontWeight.bold),
+              const SizedBox(height: 10),
+              // Filter Chips
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: ['الكل', 'فعالة', 'موقوفة', 'تجريبية'].map((chip) {
+                    final selected = _farmFilter == chip;
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: ChoiceChip(
+                        label: Text(chip, style: TextStyle(fontSize: 11, color: selected ? Colors.white : null)),
+                        selected: selected,
+                        selectedColor: AppColors.primaryGreen,
+                        onSelected: (val) {
+                          if (val) setState(() => _farmFilter = chip);
+                        },
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(isAr ? subtitleAr : subtitleEn, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          const SizedBox(height: 12),
-          Align(
-            alignment: isAr ? Alignment.centerLeft : Alignment.centerRight,
+        ),
+        // Farms List
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: filtered.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final farm = filtered[index];
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // Farm image placeholder circle
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDCFCE7),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.grass_rounded, color: AppColors.primaryGreen, size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            farm['name'] as String,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            farm['details'] as String,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: farm['badgeBg'] as Color,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        farm['status'] as String,
+                        style: TextStyle(
+                          color: farm['badgeColor'] as Color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.chevron_left_rounded, color: Colors.grey, size: 20),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        // Bottom Action Button: + إضافة مزرعة
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            height: 46,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: priorityColor,
+                backgroundColor: AppColors.primaryGreen,
                 foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              icon: const Icon(Icons.arrow_forward_rounded, size: 14),
-              label: Text(actionLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              onPressed: onAction,
+              onPressed: () {
+                Navigator.pushNamed(context, AppRoutes.farmAddEdit);
+              },
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: Text(
+                isAr ? '+ إضافة مزرعة' : '+ Add New Farm',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  // =========================================================================
+  // TAB 2: USER MANAGEMENT (Reference Image 2, Panel 5)
+  // =========================================================================
+  Widget _buildUsersTab(bool isDark, bool isAr) {
+    // Exact cards matching Reference Image 2
+    final List<Map<String, String>> mockUsersList = [
+      {
+        'name': isAr ? 'أحمد محمود' : 'Ahmed Mahmoud',
+        'role': isAr ? 'مزارع' : 'Farmer',
+        'status': isAr ? 'فعال' : 'Active',
+      },
+      {
+        'name': isAr ? 'محمد علي' : 'Mohamed Ali',
+        'role': isAr ? 'مزارع' : 'Farmer',
+        'status': isAr ? 'فعال' : 'Active',
+      },
+      {
+        'name': isAr ? 'سارة حسن' : 'Sara Hassan',
+        'role': isAr ? 'مشرف منطقة' : 'Area Supervisor',
+        'status': isAr ? 'فعال' : 'Active',
+      },
+      {
+        'name': isAr ? 'محمود إبراهيم' : 'Mahmoud Ibrahim',
+        'role': isAr ? 'الدعم الفني' : 'Technical Support',
+        'status': isAr ? 'فعال' : 'Active',
+      },
+    ];
+
+    final filtered = mockUsersList.where((u) {
+      final nameStr = u['name'] ?? '';
+      final roleStr = u['role'] ?? '';
+      final matchesSearch = _userSearch.isEmpty ||
+          nameStr.toLowerCase().contains(_userSearch.toLowerCase()) ||
+          roleStr.toLowerCase().contains(_userSearch.toLowerCase());
+      final matchesFilter = _userFilter == 'الكل' ||
+          (_userFilter == 'المزارعون' && u['role'] == 'مزارع') ||
+          (_userFilter == 'المشرفون' && u['role'] == 'مشرف منطقة') ||
+          (_userFilter == 'الدعم' && u['role'] == 'الدعم الفني');
+      return matchesSearch && matchesFilter;
+    }).toList();
+
+    return Column(
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isAr ? 'إدارة المستخدمين' : 'User Management',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              // Search Field
+              TextField(
+                onChanged: (val) => setState(() => _userSearch = val),
+                decoration: InputDecoration(
+                  hintText: isAr ? 'بحث عن مستخدم ...' : 'Search for a user...',
+                  hintStyle: const TextStyle(fontSize: 12),
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Filter Chips
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: ['الكل', 'المزارعون', 'المشرفون', 'الدعم'].map((chip) {
+                    final selected = _userFilter == chip;
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: ChoiceChip(
+                        label: Text(chip, style: TextStyle(fontSize: 11, color: selected ? Colors.white : null)),
+                        selected: selected,
+                        selectedColor: AppColors.primaryGreen,
+                        onSelected: (val) {
+                          if (val) setState(() => _userFilter = chip);
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Users List
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: filtered.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final userItem = filtered[index];
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: const Color(0xFFDCFCE7),
+                      child: const Icon(Icons.person_outline_rounded, color: AppColors.primaryGreen, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userItem['name'] as String,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            userItem['role'] as String,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDCFCE7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        userItem['status'] as String,
+                        style: const TextStyle(
+                          color: Color(0xFF16A34A),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.chevron_left_rounded, color: Colors.grey, size: 20),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        // Bottom Action Button: + إضافة مستخدم
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => _openCreateUserDialog(isDark, isAr),
+              icon: const Icon(Icons.person_add_rounded, size: 20),
+              label: Text(
+                isAr ? '+ إضافة مستخدم' : '+ Add New User',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _openCreateUserDialog(bool isDark, bool isAr) {
+    final nameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    UserRole selectedRole = UserRole.farmOwner;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(isAr ? 'إضافة مستخدم جديد' : 'Add New User'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: InputDecoration(labelText: isAr ? 'الاسم بالكامل' : 'Full Name'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: emailCtrl,
+                decoration: InputDecoration(labelText: isAr ? 'البريد الإلكتروني' : 'Email Address'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: phoneCtrl,
+                decoration: InputDecoration(labelText: isAr ? 'رقم الهاتف' : 'Phone Number'),
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<UserRole>(
+                value: selectedRole,
+                decoration: InputDecoration(labelText: isAr ? 'الدور والنوع' : 'Role'),
+                items: [
+                  DropdownMenuItem(value: UserRole.farmOwner, child: Text(isAr ? 'مزارع' : 'Farmer')),
+                  DropdownMenuItem(value: UserRole.superAdmin, child: Text(isAr ? 'مسؤول نظام' : 'Super Admin')),
+                ],
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => selectedRole = val);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(isAr ? 'إلغاء' : 'Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGreen),
+              onPressed: () {
+                if (nameCtrl.text.trim().isNotEmpty && emailCtrl.text.trim().isNotEmpty) {
+                  _authService.createAccountByAdmin(
+                    username: emailCtrl.text.split('@').first,
+                    nameEn: nameCtrl.text,
+                    nameAr: nameCtrl.text,
+                    email: emailCtrl.text,
+                    phone: phoneCtrl.text,
+                    role: selectedRole,
+                    initialPassword: 'Temp@2026Password',
+                  );
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(isAr ? 'تم إنشاء الحساب بنجاح' : 'User created successfully')),
+                  );
+                }
+              },
+              child: Text(isAr ? 'حفظ' : 'Save', style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // =========================================================================
+  // TAB 3: IOT DEVICE MANAGEMENT (Reference Image 2, Panel 6)
+  // =========================================================================
+  Widget _buildDevicesTab(bool isDark, bool isAr) {
+    // Exact cards matching Reference Image 2
+    final List<Map<String, dynamic>> mockDevicesList = [
+      {
+        'id': 'ESP32 - #GF001',
+        'zone': isAr ? 'مزرعة النور - منطقة A' : 'Al-Nour Farm - Zone A',
+        'status': isAr ? 'متصل' : 'Connected',
+        'badgeColor': const Color(0xFF16A34A),
+        'badgeBg': const Color(0xFFDCFCE7),
+      },
+      {
+        'id': 'ESP32 - #GF002',
+        'zone': isAr ? 'مزرعة الواحة - منطقة B' : 'Al-Waha Farm - Zone B',
+        'status': isAr ? 'متصل' : 'Connected',
+        'badgeColor': const Color(0xFF16A34A),
+        'badgeBg': const Color(0xFFDCFCE7),
+      },
+      {
+        'id': 'ESP32 - #GF003',
+        'zone': isAr ? 'مزرعة الريان - منطقة C' : 'Al-Rayan Farm - Zone C',
+        'status': isAr ? 'غير متصل' : 'Offline',
+        'badgeColor': const Color(0xFFDC2626),
+        'badgeBg': const Color(0xFFFEE2E2),
+      },
+      {
+        'id': 'ESP32 - #GF004',
+        'zone': isAr ? 'مزرعة الخير - منطقة A' : 'Al-Khair Farm - Zone A',
+        'status': isAr ? 'بحاجة صيانة' : 'Needs Maintenance',
+        'badgeColor': const Color(0xFFD97706),
+        'badgeBg': const Color(0xFFFEF3C7),
+      },
+    ];
+
+    final filtered = mockDevicesList.where((d) {
+      final idStr = d['id'] as String;
+      final zoneStr = d['zone'] as String;
+      final matchesSearch = _deviceSearch.isEmpty ||
+          idStr.toLowerCase().contains(_deviceSearch.toLowerCase()) ||
+          zoneStr.toLowerCase().contains(_deviceSearch.toLowerCase());
+      final matchesFilter = _deviceFilter == 'الكل' || d['status'] == _deviceFilter;
+      return matchesSearch && matchesFilter;
+    }).toList();
+
+    return Column(
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isAr ? 'إدارة الأجهزة (IoT)' : 'IoT Hardware Management',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              // Search Field
+              TextField(
+                onChanged: (val) => setState(() => _deviceSearch = val),
+                decoration: InputDecoration(
+                  hintText: isAr ? 'بحث برقم الجهاز أو المزرعة ...' : 'Search device ID or farm...',
+                  hintStyle: const TextStyle(fontSize: 12),
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Filter Chips
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: ['الكل', 'متصل', 'غير متصل', 'بحاجة صيانة'].map((chip) {
+                    final selected = _deviceFilter == chip;
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: ChoiceChip(
+                        label: Text(chip, style: TextStyle(fontSize: 11, color: selected ? Colors.white : null)),
+                        selected: selected,
+                        selectedColor: AppColors.primaryGreen,
+                        onSelected: (val) {
+                          if (val) setState(() => _deviceFilter = chip);
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Devices List
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: filtered.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final device = filtered[index];
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // ESP32 Graphic Icon
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.memory_rounded, color: Color(0xFF4ADE80), size: 24),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            device['id'] as String,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            device['zone'] as String,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: device['badgeBg'] as Color,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        device['status'] as String,
+                        style: TextStyle(
+                          color: device['badgeColor'] as Color,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.chevron_left_rounded, color: Colors.grey, size: 20),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        // Bottom Action Button: + إضافة جهاز
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                Navigator.pushNamed(context, AppRoutes.deviceSetup);
+              },
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: Text(
+                isAr ? '+ إضافة جهاز' : '+ Add New IoT Device',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // =========================================================================
+  // TAB 4: MORE HUB (Subscriptions, Analytics, Notifications, Settings)
+  // =========================================================================
+  Widget _buildMoreTab(bool isDark, bool isAr) {
+    return Column(
+      children: [
+        // Sub-navigation bar within More tab
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildSubNavChip(
+                  label: isAr ? 'الاشتراكات والباقات' : 'Subscriptions',
+                  id: 'subscriptions',
+                  icon: Icons.workspace_premium_rounded,
+                ),
+                const SizedBox(width: 8),
+                _buildSubNavChip(
+                  label: isAr ? 'التقارير والتحليلات' : 'Analytics',
+                  id: 'analytics',
+                  icon: Icons.bar_chart_rounded,
+                ),
+                const SizedBox(width: 8),
+                _buildSubNavChip(
+                  label: isAr ? 'التنبيهات والإشعارات' : 'Alerts',
+                  id: 'alerts',
+                  icon: Icons.notifications_active_rounded,
+                ),
+                const SizedBox(width: 8),
+                _buildSubNavChip(
+                  label: isAr ? 'إعدادات النظام' : 'Settings',
+                  id: 'settings',
+                  icon: Icons.settings_rounded,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: Builder(
+            builder: (context) {
+              switch (_moreSubModule) {
+                case 'analytics':
+                  return _buildMoreAnalyticsView(isDark, isAr);
+                case 'alerts':
+                  return _buildMoreAlertsView(isDark, isAr);
+                case 'settings':
+                  return _buildMoreSettingsView(isDark, isAr);
+                case 'subscriptions':
+                default:
+                  return _buildMoreSubscriptionsView(isDark, isAr);
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubNavChip({
+    required String label,
+    required String id,
+    required IconData icon,
+  }) {
+    final selected = _moreSubModule == id;
+    return ChoiceChip(
+      avatar: Icon(icon, size: 16, color: selected ? Colors.white : AppColors.primaryGreen),
+      label: Text(label, style: TextStyle(fontSize: 11, color: selected ? Colors.white : null)),
+      selected: selected,
+      selectedColor: AppColors.primaryGreen,
+      onSelected: (val) {
+        if (val) setState(() => _moreSubModule = id);
+      },
+    );
+  }
+
+  // --- Subscriptions Sub-Module (Reference Image 2, Panel 7) ---
+  Widget _buildMoreSubscriptionsView(bool isDark, bool isAr) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Two Header Stats Cards
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isAr ? 'المشتركين النشطين' : 'Active Subscribers',
+                      style: TextStyle(fontSize: 11, color: isDark ? Colors.grey : const Color(0xFF6B7280)),
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const Text('410', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 4),
+                        const Text('↑ +9%', style: TextStyle(color: Color(0xFF16A34A), fontSize: 11, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isAr ? 'إجمالي الإيرادات' : 'Total Revenue',
+                      style: TextStyle(fontSize: 11, color: isDark ? Colors.grey : const Color(0xFF6B7280)),
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(isAr ? '306,400 ج.م' : '306,400 EGP', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 4),
+                        const Text('↑ +18%', style: TextStyle(color: Color(0xFF16A34A), fontSize: 11, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // إدارة الباقات
+        Text(
+          isAr ? 'إدارة الباقات' : 'Subscription Plans',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        _buildPlanCard(
+          title: isAr ? 'الباقة الأساسية' : 'Basic Plan',
+          details: isAr ? '10 أشجار - 500 ج.م / شهر' : '10 Trees - 500 EGP / Month',
+          icon: Icons.eco_rounded,
+          isDark: isDark,
+        ),
+        const SizedBox(height: 10),
+        _buildPlanCard(
+          title: isAr ? 'باقة النمو' : 'Growth Plan',
+          details: isAr ? '50 شجرة - 750 ج.م / شهر' : '50 Trees - 750 EGP / Month',
+          icon: Icons.spa_rounded,
+          isDark: isDark,
+        ),
+        const SizedBox(height: 10),
+        _buildPlanCard(
+          title: isAr ? 'الباقة الاحترافية' : 'Pro Plan',
+          details: isAr ? '100 شجرة - 1,000 ج.م / شهر' : '100 Trees - 1,000 EGP / Month',
+          icon: Icons.workspace_premium_rounded,
+          isDark: isDark,
+        ),
+        const SizedBox(height: 24),
+
+        SizedBox(
+          width: double.infinity,
+          height: 46,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(isAr ? 'شاشة إضافة باقة جديدة متاحة للإدارة' : 'Add plan dialog')),
+              );
+            },
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: Text(isAr ? '+ إضافة باقة' : '+ Add New Plan', style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlanCard({
+    required String title,
+    required String details,
+    required IconData icon,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDCFCE7),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: AppColors.primaryGreen, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(details, style: TextStyle(fontSize: 11, color: isDark ? Colors.grey : const Color(0xFF6B7280))),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_left_rounded, color: Colors.grey, size: 20),
         ],
       ),
+    );
+  }
+
+  // --- Reports & Analytics Sub-Module (Reference Image 2, Panel 8) ---
+  Widget _buildMoreAnalyticsView(bool isDark, bool isAr) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Timeframe selector
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(isAr ? 'التقارير والتحليلات' : 'Reports & Analytics', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+              ),
+              child: Text(_analyticsTimeframe, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Sub-tabs: عام | الري | الأجهزة | المستخدمون
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: ['عام', 'الري', 'الأجهزة', 'المستخدمون'].map((tab) {
+              final selected = _analyticsSubTab == tab;
+              return Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: ChoiceChip(
+                  label: Text(tab, style: TextStyle(fontSize: 11, color: selected ? Colors.white : null)),
+                  selected: selected,
+                  selectedColor: AppColors.primaryGreen,
+                  onSelected: (val) {
+                    if (val) setState(() => _analyticsSubTab = tab);
+                  },
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Water Saved & Savings % Cards
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(isAr ? 'المياه الموفرة' : 'Water Saved', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                        const Icon(Icons.water_drop_outlined, color: Color(0xFF0284C7), size: 18),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text('32,450', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(isAr ? '(ألف لتر)  ↑ +21%' : '(kL) ↑ +21%', style: const TextStyle(fontSize: 10, color: Color(0xFF16A34A))),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(isAr ? 'نسبة التوفير' : 'Savings Rate', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                        const Icon(Icons.energy_savings_leaf_outlined, color: Color(0xFF16A34A), size: 18),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text('28%', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text('↑ +9%', style: const TextStyle(fontSize: 10, color: Color(0xFF16A34A))),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        // استهلاك المياه (Line Chart placeholder matching Reference Image 2)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isAr ? 'استهلاك المياه (ألف لتر)' : 'Water Consumption (kL)',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 140,
+                child: CustomPaint(
+                  size: const Size(double.infinity, 140),
+                  painter: _AdminAnalyticsChartPainter(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(isAr ? '1 نوفمبر' : 'Nov 1', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                  Text(isAr ? '8 نوفمبر' : 'Nov 8', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                  Text(isAr ? '15 نوفمبر' : 'Nov 15', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                  Text(isAr ? '22 نوفمبر' : 'Nov 22', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                  Text(isAr ? '30 نوفمبر' : 'Nov 30', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- Alerts & Notifications Sub-Module (Reference Image 2, Panel 9) ---
+  Widget _buildMoreAlertsView(bool isDark, bool isAr) {
+    final mockAlerts = [
+      {
+        'title': isAr ? 'انخفاض رطوبة التربة' : 'Low Soil Moisture',
+        'sub': isAr ? 'مزرعة النور - منطقة A\nالرطوبة 18% (أقل من الحد)' : 'Al-Nour Farm - Zone A\nMoisture 18% (Below Threshold)',
+        'time': isAr ? 'منذ 5 دقائق' : '5m ago',
+        'icon': Icons.warning_amber_rounded,
+        'color': const Color(0xFFDC2626),
+        'bg': const Color(0xFFFEE2E2),
+        'category': 'أعطال',
+      },
+      {
+        'title': isAr ? 'جهاز غير متصل' : 'Device Offline',
+        'sub': isAr ? 'ESP32 - #GF003\nمزرعة الريان - منطقة C' : 'ESP32 - #GF003\nAl-Rayan Farm - Zone C',
+        'time': isAr ? 'منذ 17 دقيقة' : '17m ago',
+        'icon': Icons.wifi_off_rounded,
+        'color': const Color(0xFFD97706),
+        'bg': const Color(0xFFFEF3C7),
+        'category': 'أعطال',
+      },
+      {
+        'title': isAr ? 'انتهاء اشتراك قريب' : 'Subscription Expiring Soon',
+        'sub': isAr ? 'مزرعة الواحة\nيتبقى 3 أيام على انتهاء الاشتراك' : 'Al-Waha Farm\n3 days remaining',
+        'time': isAr ? 'منذ ساعة' : '1h ago',
+        'icon': Icons.calendar_month_outlined,
+        'color': const Color(0xFF0284C7),
+        'bg': const Color(0xFFE0F2FE),
+        'category': 'النظام',
+      },
+      {
+        'title': isAr ? 'تم تنفيذ الري تلقائياً' : 'Automatic Irrigation Completed',
+        'sub': isAr ? 'مزرعة الخير - منطقة B\nمدة الري: 30 دقيقة' : 'Al-Khair Farm - Zone B\nRuntime: 30 mins',
+        'time': isAr ? 'منذ ساعتين' : '2h ago',
+        'icon': Icons.check_circle_outline_rounded,
+        'color': const Color(0xFF16A34A),
+        'bg': const Color(0xFFDCFCE7),
+        'category': 'مؤشرات',
+      },
+    ];
+
+    final filtered = mockAlerts.where((a) {
+      if (_alertFilter == 'الكل') return true;
+      return a['category'] == _alertFilter;
+    }).toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(isAr ? 'التنبيهات والإشعارات' : 'Alerts & Notifications', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: ['الكل', 'أعطال', 'مؤشرات', 'النظام'].map((chip) {
+                    final selected = _alertFilter == chip;
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: ChoiceChip(
+                        label: Text(chip, style: TextStyle(fontSize: 11, color: selected ? Colors.white : null)),
+                        selected: selected,
+                        selectedColor: AppColors.primaryGreen,
+                        onSelected: (val) {
+                          if (val) setState(() => _alertFilter = chip);
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: filtered.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final alert = filtered[index];
+              return Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: alert['bg'] as Color,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(alert['icon'] as IconData, color: alert['color'] as Color, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(alert['title'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text(alert['time'] as String, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            alert['sub'] as String,
+                            style: TextStyle(fontSize: 11, color: isDark ? Colors.grey : const Color(0xFF4B5563)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- System Settings Sub-Module (Reference Image 2, Panel 10) ---
+  Widget _buildMoreSettingsView(bool isDark, bool isAr) {
+    final settingsItems = [
+      {'title': isAr ? 'إعدادات التطبيق' : 'App Settings', 'icon': Icons.settings_applications_outlined},
+      {'title': isAr ? 'إدارة الصلاحيات والأدوار' : 'Roles & Access Permissions', 'icon': Icons.admin_panel_settings_outlined},
+      {'title': isAr ? 'إعدادات الأجهزة (IoT)' : 'IoT Hardware Configurations', 'icon': Icons.memory_outlined},
+      {'title': isAr ? 'إعدادات الإشعارات' : 'Notification Preferences', 'icon': Icons.notifications_none_outlined},
+      {'title': isAr ? 'إعدادات الاشتراكات والدفع' : 'Subscription & Billing Settings', 'icon': Icons.payment_outlined},
+      {'title': isAr ? 'نسخ احتياطي للبيانات' : 'Data Backup & Restore', 'icon': Icons.cloud_download_outlined},
+      {'title': isAr ? 'سجلات النظام' : 'System Logs & Audit Trail', 'icon': Icons.description_outlined},
+      {'title': isAr ? 'حول النظام' : 'About Green Flow Platform', 'icon': Icons.info_outline_rounded},
+    ];
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: settingsItems.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final item = settingsItems[index];
+        return InkWell(
+          onTap: () {
+            if (index == 7) {
+              _showAboutDialog(isAr);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('${item['title']} - ${isAr ? 'الإعدادات جاهزة' : 'Settings configured'}')),
+              );
+            }
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                Icon(item['icon'] as IconData, size: 20, color: AppColors.primaryGreen),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    item['title'] as String,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const Icon(Icons.chevron_left_rounded, color: Colors.grey, size: 20),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAboutDialog(bool isAr) {
+    showAboutDialog(
+      context: context,
+      applicationName: 'Green Flow',
+      applicationVersion: '2.0.0',
+      applicationIcon: const Icon(Icons.eco_rounded, color: AppColors.primaryGreen, size: 40),
+      children: [
+        Text(
+          isAr
+              ? 'نظام جرين فلو لإدارة المزارع الذكية، أنظمة الري الدقيق، وحساسات إنترنت الأشياء الموزعة.'
+              : 'Green Flow Enterprise Smart Agriculture & IoT Management Platform.',
+        ),
+      ],
     );
   }
 }
 
-/// Statistics Tile with high visual hierarchy, clean elevation, and dynamic theme support.
-class _AdminStatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final String subText;
-  final IconData icon;
-  final Color color;
-  final bool isDark;
-  final VoidCallback? onTap;
+/// Custom painter for the water consumption trend line chart in Analytics.
+class _AdminAnalyticsChartPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = const Color(0xFF16A34A)
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
 
-  const _AdminStatCard({
-    required this.label,
-    required this.value,
-    required this.subText,
-    required this.icon,
-    required this.color,
-    required this.isDark,
-    this.onTap,
-  });
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          const Color(0xFF16A34A).withValues(alpha: 0.25),
+          const Color(0xFF16A34A).withValues(alpha: 0.0),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final fillPath = Path();
+
+    final points = [
+      Offset(0, size.height * 0.7),
+      Offset(size.width * 0.2, size.height * 0.55),
+      Offset(size.width * 0.4, size.height * 0.65),
+      Offset(size.width * 0.6, size.height * 0.45),
+      Offset(size.width * 0.8, size.height * 0.5),
+      Offset(size.width, size.height * 0.35),
+    ];
+
+    path.moveTo(points[0].dx, points[0].dy);
+    fillPath.moveTo(points[0].dx, size.height);
+    fillPath.lineTo(points[0].dx, points[0].dy);
+
+    for (var i = 1; i < points.length; i++) {
+      path.lineTo(points[i].dx, points[i].dy);
+      fillPath.lineTo(points[i].dx, points[i].dy);
+    }
+
+    fillPath.lineTo(size.width, size.height);
+    fillPath.close();
+
+    canvas.drawPath(fillPath, fillPaint);
+    canvas.drawPath(path, linePaint);
+
+    // Draw active point
+    final dotPaint = Paint()..color = const Color(0xFF16A34A);
+    final dotOuter = Paint()..color = Colors.white;
+    canvas.drawCircle(points.last, 5, dotOuter);
+    canvas.drawCircle(points.last, 3, dotPaint);
+  }
 
   @override
-  Widget build(BuildContext context) {
-    final card = Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              if (onTap != null)
-                Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey.withValues(alpha: 0.6)),
-            ],
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: -0.5),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                subText,
-                style: const TextStyle(fontSize: 9, color: Colors.grey),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-
-    if (onTap != null) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: card,
-      );
-    }
-    return card;
-  }
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

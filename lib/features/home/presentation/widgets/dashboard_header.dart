@@ -5,6 +5,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/app_logo.dart';
 import '../../../../core/widgets/iot_pulse_indicator.dart';
+import '../../../../core/widgets/voice_assistant_speaker_button.dart';
 
 /// Commercial Dashboard Header for Green Flow.
 /// Displays branding, farmer greeting, live date, unread alert badge, and user profile avatar.
@@ -268,7 +269,7 @@ class DashboardHeader extends StatelessWidget {
         // Welcome greeting banner
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: Column(
@@ -307,8 +308,15 @@ class DashboardHeader extends StatelessWidget {
                 ],
               ),
             ),
-
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
+            VoiceAssistantSpeakerButton(
+              arabicMessage: isArabic
+                  ? 'أهلاً بيك في جرين فلو، مزرعتك بخير وجاهزة للمتابعة.'
+                  : 'Welcome to Green Flow. Your farm is active and ready.',
+              englishMessage: 'Welcome to Green Flow. Your farm is active and ready.',
+              tooltip: isArabic ? 'استمع إلى المساعد الصوتي' : 'Voice Assistant',
+            ),
+            const SizedBox(width: 8),
 
             // Date Badge
             Flexible(

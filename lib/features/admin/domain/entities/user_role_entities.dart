@@ -1,7 +1,7 @@
 /// Admin domain entities: user roles, app user, and permission matrix.
 library;
 
-enum UserRole { systemAdmin, farmOwner, farmWorker, technician }
+enum UserRole { systemAdmin, farmOwner }
 
 extension UserRoleLabel on UserRole {
   String get labelEn {
@@ -9,24 +9,16 @@ extension UserRoleLabel on UserRole {
       case UserRole.systemAdmin:
         return 'System Admin';
       case UserRole.farmOwner:
-        return 'Farm Owner';
-      case UserRole.farmWorker:
-        return 'Farm Worker';
-      case UserRole.technician:
-        return 'Technician';
+        return 'Farmer';
     }
   }
 
   String get labelAr {
     switch (this) {
       case UserRole.systemAdmin:
-        return 'مدير النظام';
+        return 'مسؤول النظام';
       case UserRole.farmOwner:
-        return 'مالك المزرعة';
-      case UserRole.farmWorker:
-        return 'عامل المزرعة';
-      case UserRole.technician:
-        return 'فني';
+        return 'مزارع';
     }
   }
 }
@@ -59,13 +51,9 @@ class PermissionMatrix {
   const PermissionMatrix._();
 
   static bool canManageUsers(UserRole role) => role == UserRole.systemAdmin;
-  static bool canManageFarms(UserRole role) =>
-      role == UserRole.systemAdmin || role == UserRole.farmOwner;
-  static bool canControlIrrigation(UserRole role) =>
-      role != UserRole.farmWorker; // workers can view only
-  static bool canApproveQuotations(UserRole role) =>
-      role == UserRole.systemAdmin;
-  static bool canViewAnalytics(UserRole role) => role != UserRole.farmWorker;
-  static bool canManageDevices(UserRole role) =>
-      role == UserRole.systemAdmin || role == UserRole.technician;
+  static bool canManageFarms(UserRole role) => true;
+  static bool canControlIrrigation(UserRole role) => true;
+  static bool canApproveQuotations(UserRole role) => role == UserRole.systemAdmin;
+  static bool canViewAnalytics(UserRole role) => true;
+  static bool canManageDevices(UserRole role) => role == UserRole.systemAdmin;
 }

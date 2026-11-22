@@ -53,7 +53,7 @@ class AuthService extends ChangeNotifier {
       } catch (_) {}
     }
 
-    // Default Seeded Demo Accounts (One for each core business role)
+    // Default Seeded Demo Accounts (Super Admin and Farmers)
     _accounts = [
       // 1. Super Admin (System Owner)
       UserAccount(
@@ -110,47 +110,6 @@ class AuthService extends ChangeNotifier {
         status: AccountStatus.pendingApproval,
         passwordHash: hashPassword('Pending@2026'),
         createdAt: DateTime.now().subtract(const Duration(hours: 4)),
-      ),
-      // 5. Field Technician (Assigned to Farm 001 and Farm 002)
-      UserAccount(
-        id: 'usr-tech-01',
-        username: 'tech_kareem',
-        nameEn: 'Kareem Samir (Field Engineer)',
-        nameAr: 'كريم سمير (مهندس تركيبات وحساسات)',
-        email: 'kareem@iottech.dev',
-        phone: '+20 155 567 8901',
-        role: UserRole.technician,
-        status: AccountStatus.approved,
-        assignedFarmIds: ['farm-001', 'farm-002'],
-        passwordHash: hashPassword('Tech@2026'),
-        createdAt: DateTime(2025, 4, 15),
-      ),
-      // 6. Agricultural Farm Worker (Assigned strictly to Farm 001)
-      UserAccount(
-        id: 'usr-worker-01',
-        username: 'worker_hassan',
-        nameEn: 'Hassan Nabil (Irrigation Operator)',
-        nameAr: 'حسن نبيل (عامل تشغيل شبكة الري)',
-        email: 'hassan@greenflow.io',
-        phone: '+20 100 456 7890',
-        role: UserRole.farmWorker,
-        status: AccountStatus.approved,
-        assignedFarmId: 'farm-001',
-        passwordHash: hashPassword('Worker@2026'),
-        createdAt: DateTime(2025, 5, 20),
-      ),
-      // 7. Finance & Pricing Manager
-      UserAccount(
-        id: 'usr-finance-01',
-        username: 'finance_mona',
-        nameEn: 'Mona Zaki (Finance & Pricing)',
-        nameAr: 'منى زكي (مديرة المالية والتسعير)',
-        email: 'finance@greenflow.io',
-        phone: '+20 120 789 0123',
-        role: UserRole.financeManager,
-        status: AccountStatus.approved,
-        passwordHash: hashPassword('Finance@2026'),
-        createdAt: DateTime(2025, 2, 1),
       ),
     ];
     _persistAccounts();

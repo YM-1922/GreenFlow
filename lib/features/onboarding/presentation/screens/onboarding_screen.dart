@@ -3,11 +3,12 @@ import '../../../../app/app.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
-import '../../../../core/widgets/custom_button.dart';
-import '../../../../core/widgets/status_badge.dart';
+import '../../../../core/utils/file_io.dart' as file_io;
 import '../widgets/onboarding_illustration.dart';
 
 /// Interactive 3-screen Onboarding experience for Green Flow.
+/// Recreates the reference design layout, typography, navigation controls,
+/// and smooth horizontal page transitions with RTL/LTR responsiveness.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -19,6 +20,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
 
+  static const String _onboardingPrefFile = '.greenflow_onboarding_pref';
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -28,7 +31,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _onNext() {
     if (_currentIndex < 2) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 380),
+        duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOutCubic,
       );
     } else {
@@ -36,8 +39,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  void _onPrevious() {
+    if (_currentIndex > 0) {
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubic,
+      );
+    }
+  }
+
   void _finishOnboarding() {
-    Navigator.of(context).pushReplacementNamed(AppRoutes.authentication);
+    file_io.writeFileSync(_onboardingPrefFile, 'completed');
+    Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+  }
+
+  void _toggleLanguage() {
+    final isArabic = AppStrings.isArabic(context);
+    final newLocale = isArabic ? const Locale('en') : const Locale('ar');
+    GreenFlowApp.setLocale(context, newLocale);
   }
 
   @override
@@ -57,230 +76,303 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       AppStrings.onboardingDesc3(context),
     ];
 
-    final badges = [
-      isArabic ? 'الذكاء الزراعي' : 'Agri-Tech AI',
-      isArabic ? 'توفير المياه' : 'Precision Flow',
-      isArabic ? 'مجسات ESP32' : 'IoT Telemetry',
-    ];
-
-    final badgeIcons = [
-      Icons.auto_awesome_rounded,
-      Icons.water_drop_rounded,
-      Icons.sensors_rounded,
-    ];
-
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
       body: SafeArea(
         child: Column(
           children: [
-            // Top Bar: Skip button & Language switcher
+            // Top Bar: Skip button on start & Language dropdown badge on end
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Language Toggle
+                  // Skip button (visible on screens 1 & 2, or replaced with spacer)
+                  _currentIndex < 2
+                      ? TextButton(
+                          onPressed: _finishOnboarding,
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primaryGreenDark,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          ),
+                          child: Text(
+                            AppStrings.skip(context),
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryGreenDark,
+                            ),
+                          ),
+                        )
+                      : const SizedBox(width: 48),
+
+                  // Language Dropdown Selector Badge
                   InkWell(
                     borderRadius: BorderRadius.circular(20),
-                    onTap: () {
-                      final newLocale = isArabic
-                          ? const Locale('en')
-                          : const Locale('ar');
-                      GreenFlowApp.setLocale(context, newLocale);
-                    },
+                    onTap: _toggleLanguage,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.cardDark
-                            : AppColors.primaryGreenSurface,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isDark
-                              ? AppColors.borderDark
-                              : AppColors.primaryGreen.withValues(alpha: 0.2),
-                        ),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.language_rounded,
-                            size: 15,
-                            color: AppColors.primaryGreen,
+                            size: 16,
+                            color: AppColors.textSecondaryLight,
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            isArabic ? 'English' : 'العربية',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? Colors.white : AppColors.primaryGreenDark,
+                            isArabic ? 'العربية' : 'English',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimaryLight,
                             ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            size: 16,
+                            color: AppColors.textSecondaryLight,
                           ),
                         ],
                       ),
                     ),
                   ),
-
-                  // Skip Action
-                  if (_currentIndex < 2)
-                    TextButton(
-                      onPressed: _finishOnboarding,
-                      child: Text(
-                        AppStrings.skip(context),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
-                        ),
-                      ),
-                    )
-                  else
-                    const SizedBox(width: 48),
                 ],
               ),
             ),
 
-            // Page Content (PageView)
+            // Middle: Illustration & Text content inside horizontal PageView
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: 3,
                 onPageChanged: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
+                  setState(() => _currentIndex = index);
                 },
                 itemBuilder: (context, index) {
-                  return LayoutBuilder(
-                    builder: (context, constraints) {
-                      final double illustrationSize =
-                          (constraints.maxHeight * 0.42).clamp(140.0, 230.0);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      children: [
+                        const Spacer(flex: 1),
 
-                      return Center(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 28,
-                            vertical: 8,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Pillar Badge
-                              StatusBadge(
-                                label: badges[index],
-                                color: index == 1
-                                    ? AppColors.flowBlue
-                                    : AppColors.primaryGreen,
-                                icon: badgeIcons[index],
-                              ),
+                        // Scenic Visual Illustration
+                        OnboardingIllustration(
+                          pageIndex: index,
+                          height: MediaQuery.of(context).size.height * 0.38,
+                        ),
 
-                              const SizedBox(height: 20),
+                        const Spacer(flex: 2),
 
-                              // Custom Vector Illustration
-                              OnboardingIllustration(
-                                pageIndex: index,
-                                size: illustrationSize,
-                              ),
-
-                              const SizedBox(height: 24),
-
-                              // Title
-                              Text(
-                                titles[index],
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                  color: isDark
-                                      ? AppColors.textPrimaryDark
-                                      : AppColors.textPrimaryLight,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              // Description
-                              Text(
-                                descriptions[index],
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  color: isDark
-                                      ? AppColors.textSecondaryDark
-                                      : AppColors.textSecondaryLight,
-                                  height: 1.45,
-                                ),
-                              ),
-                            ],
+                        // Title
+                        Text(
+                          titles[index],
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.3,
+                            color: AppColors.primaryGreenDark,
                           ),
                         ),
-                      );
-                    },
+
+                        const SizedBox(height: 14),
+
+                        // Description
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            descriptions[index],
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14.5,
+                              height: 1.55,
+                              color: AppColors.textSecondaryLight,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+
+                        const Spacer(flex: 2),
+                      ],
+                    ),
                   );
                 },
               ),
             ),
 
+            // Animated Dots Indicator
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(3, (index) {
+                final isSelected = _currentIndex == index;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: isSelected ? 18 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.primaryGreen : const Color(0xFFD1D5DB),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                );
+              }),
+            ),
+
+            const SizedBox(height: 28),
+
             // Bottom Navigation Controls
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Dot Page Indicators
-                  Row(
-                    children: List.generate(3, (index) {
-                      final isSelected = _currentIndex == index;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: isSelected ? 24 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primaryGreen
-                              : (isDark
-                                  ? AppColors.borderDark
-                                  : AppColors.borderLight),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      );
-                    }),
-                  ),
-
-                  // Next / Get Started Button
-                  SizedBox(
-                    width: _currentIndex == 2 ? 160 : 120,
-                    height: 48,
-                    child: CustomButton(
-                      label: _currentIndex == 2
-                          ? AppStrings.getStarted(context)
-                          : AppStrings.next(context),
-                      icon: _currentIndex == 2
-                          ? Icons.rocket_launch_rounded
-                          : (isArabic
-                              ? Icons.arrow_back_rounded
-                              : Icons.arrow_forward_rounded),
-                      onPressed: _onNext,
-                    ),
-                  ),
-                ],
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: _buildBottomActions(isArabic),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildBottomActions(bool isArabic) {
+    if (_currentIndex == 0) {
+      // Screen 1: Full-width Next Button with Arrow
+      return ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primaryGreen,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 54),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          elevation: 2,
+          shadowColor: AppColors.primaryGreen.withValues(alpha: 0.35),
+        ),
+        onPressed: _onNext,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              AppStrings.next(context),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              isArabic ? Icons.arrow_back_rounded : Icons.arrow_forward_rounded,
+              size: 20,
+            ),
+          ],
+        ),
+      );
+    } else if (_currentIndex == 1) {
+      // Screen 2: Next (Primary Green) and Previous (Light Pill Button)
+      return Row(
+        children: [
+          // Next Button
+          Expanded(
+            flex: 3,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryGreen,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 54),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                elevation: 2,
+                shadowColor: AppColors.primaryGreen.withValues(alpha: 0.35),
+              ),
+              onPressed: _onNext,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    AppStrings.next(context),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    isArabic ? Icons.arrow_back_rounded : Icons.arrow_forward_rounded,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Previous Button (Soft White Pill matching reference)
+          Expanded(
+            flex: 2,
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.textPrimaryLight,
+                side: const BorderSide(color: Color(0xFFE5E7EB)),
+                minimumSize: const Size(double.infinity, 54),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                elevation: 1,
+                shadowColor: Colors.black.withValues(alpha: 0.04),
+              ),
+              onPressed: _onPrevious,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    AppStrings.previous(context),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    isArabic ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+                    size: 18,
+                    color: AppColors.textSecondaryLight,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    } else {
+      // Screen 3: "ابدأ الآن" / "Get Started" Full-width Button
+      return ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primaryGreen,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 54),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          elevation: 2,
+          shadowColor: AppColors.primaryGreen.withValues(alpha: 0.35),
+        ),
+        onPressed: _finishOnboarding,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              AppStrings.getStarted(context),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              isArabic ? Icons.arrow_back_rounded : Icons.arrow_forward_rounded,
+              size: 20,
+            ),
+          ],
+        ),
+      );
+    }
   }
 }

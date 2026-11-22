@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/services/voice_assistant_service.dart';
+import '../../../../core/widgets/voice_assistant_speaker_button.dart';
 import '../../data/datasources/irrigation_mock_data_source.dart';
 import '../widgets/emergency_stop_modal.dart';
 import '../widgets/irrigation_history_list.dart';
@@ -90,6 +92,15 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
         ),
         actions: [
+          // Voice Assistant Speaker
+          VoiceAssistantSpeakerButton(
+            arabicMessage: isArabic
+                ? 'دي شاشة التحكم في الري، تقدر تشغل وتوقف المضخة وتتابع المحابس والجدول الزمني.'
+                : 'This is the irrigation control screen.',
+            englishMessage: 'This is the irrigation control screen.',
+          ),
+          const SizedBox(width: 4),
+
           // Emergency E-Stop Button in AppBar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -129,8 +140,22 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
                 // 1. Central Pump Actuator Card
                 PumpControlCard(
                   pump: _dataSource.pump,
-                  onStartPump: () => _dataSource.startPump(),
-                  onStopPump: () => _dataSource.stopPump(),
+                  onStartPump: () {
+                    _dataSource.startPump();
+                    VoiceAssistantService().speak(
+                      context,
+                      arabicText: 'الري يعمل الآن.',
+                      englishText: 'Irrigation is running now.',
+                    );
+                  },
+                  onStopPump: () {
+                    _dataSource.stopPump();
+                    VoiceAssistantService().speak(
+                      context,
+                      arabicText: 'تم إيقاف تشغيل الري.',
+                      englishText: 'Irrigation has been stopped.',
+                    );
+                  },
                   onToggleAutoMode: (val) => _dataSource.setAutomaticMode(val),
                   onResetEmergencyStop: () =>
                       _dataSource.resetEmergencyStop(),

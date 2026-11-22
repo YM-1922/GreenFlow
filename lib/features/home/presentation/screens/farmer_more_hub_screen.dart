@@ -4,6 +4,7 @@ import '../../../../core/auth/auth.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/services/theme_service.dart';
+import '../../../../core/widgets/voice_assistant_speaker_button.dart';
 import '../../../analytics/presentation/screens/analytics_screen.dart';
 import '../../../farms/presentation/screens/farmer_installation_screen.dart';
 import '../../../farms/presentation/screens/inspections_list_screen.dart';
@@ -128,6 +129,12 @@ class FarmerMoreHubScreen extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
         ),
         actions: [
+          VoiceAssistantSpeakerButton(
+            arabicMessage: isAr
+                ? 'دي قائمة الخدمات الإضافية لمزرعتك، تقدر تتابع الطقس والطاقة الشمسية والفواتير والاشتراكات.'
+                : 'This is the additional services hub.',
+            englishMessage: 'This is the additional services hub.',
+          ),
           IconButton(
             icon: Icon(ThemeService().isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
             tooltip: isAr ? 'تبديل المظهر' : 'Toggle Theme',

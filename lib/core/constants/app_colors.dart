@@ -6,10 +6,11 @@ class AppColors {
   AppColors._();
 
   // Primary Agriculture Greens
-  static const Color primaryGreen = Color(0xFF10B981); // Emerald Green
-  static const Color primaryGreenDark = Color(0xFF047857); // Deep Forest Green
-  static const Color primaryGreenLight = Color(0xFF34D399); // Fresh Mint Green
-  static const Color primaryGreenSurface = Color(0xFFECFDF5); // Ultra-light green tint
+  static const Color primaryGreen = Color(0xFF16A34A); // Reference Primary Green #16A34A
+  static const Color primaryGreenDark = Color(0xFF166534); // Reference Dark Green #166534
+  static const Color primaryGreenLight = Color(0xFF22C55E); // Fresh Mint Green
+  static const Color softSage = Color(0xFFE8F0E7); // Reference Soft Sage #E8F0E7
+  static const Color primaryGreenSurface = Color(0xFFE8F0E7); // Ultra-light green tint / Soft Sage
 
   // Secondary Irrigation & Water Flow Blues
   static const Color flowBlue = Color(0xFF0284C7); // Clean Water Blue
@@ -18,7 +19,7 @@ class AppColors {
   static const Color flowBlueSurface = Color(0xFFF0F9FF); // Ultra-light water tint
 
   // IoT & Sensor State Colors
-  static const Color sensorOnline = Color(0xFF22C55E); // Active / Optimal
+  static const Color sensorOnline = Color(0xFF16A34A); // Active / Optimal
   static const Color sensorConnecting = Color(0xFF0EA5E9); // Syncing
   static const Color sensorWarning = Color(0xFFF59E0B); // Low Moisture / Attention
   static const Color sensorAlert = Color(0xFFEF4444); // Critical / High Temp
@@ -26,13 +27,13 @@ class AppColors {
 
   // Neutral Colors (Light Theme)
   static const Color pureWhite = Color(0xFFFFFFFF);
-  static const Color backgroundLight = Color(0xFFF8FAFC);
+  static const Color backgroundLight = Color(0xFFFAFCF9); // Reference Background #FAFCF9
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color cardLight = Color(0xFFFFFFFF);
-  static const Color borderLight = Color(0xFFE2E8F0);
-  static const Color textPrimaryLight = Color(0xFF0F172A);
-  static const Color textSecondaryLight = Color(0xFF64748B);
-  static const Color textMutedLight = Color(0xFF94A3B8);
+  static const Color borderLight = Color(0xFFE5E7EB);
+  static const Color textPrimaryLight = Color(0xFF1F2937); // Reference Primary Text #1F2937
+  static const Color textSecondaryLight = Color(0xFF6B7280); // Reference Secondary Text #6B7280
+  static const Color textMutedLight = Color(0xFF9CA3AF);
 
   // Neutral Colors (Dark Theme)
   static const Color backgroundDark = Color(0xFF0B131E);

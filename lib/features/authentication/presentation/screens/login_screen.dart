@@ -69,25 +69,8 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final user = result.user!;
-    // Route dynamically based on user role
-    String destinationRoute;
-    switch (user.role) {
-      case UserRole.superAdmin:
-        destinationRoute = AppRoutes.admin;
-        break;
-      case UserRole.technician:
-        destinationRoute = AppRoutes.technicianDashboard;
-        break;
-      case UserRole.farmWorker:
-        destinationRoute = AppRoutes.workerDashboard;
-        break;
-      case UserRole.financeManager:
-        destinationRoute = AppRoutes.financeDashboard;
-        break;
-      case UserRole.farmOwner:
-        destinationRoute = AppRoutes.home;
-        break;
-    }
+    // Route dynamically based on user role (Super Admin vs Farmer)
+    final destinationRoute = user.role == UserRole.superAdmin ? AppRoutes.admin : AppRoutes.home;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -125,18 +108,6 @@ class _LoginScreenState extends State<LoginScreen> {
       case UserRole.farmOwner:
         username = 'farmer_ahmed';
         password = 'Farmer@2026';
-        break;
-      case UserRole.technician:
-        username = 'tech_kareem';
-        password = 'Tech@2026';
-        break;
-      case UserRole.farmWorker:
-        username = 'worker_hassan';
-        password = 'Worker@2026';
-        break;
-      case UserRole.financeManager:
-        username = 'finance_mona';
-        password = 'Finance@2026';
         break;
     }
 
@@ -271,33 +242,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
+                          spacing: 10,
+                          runSpacing: 8,
                           children: [
                             _RoleChip(
-                              label: isAr ? 'مدير عام (Admin)' : 'Super Admin',
+                              label: isAr ? 'مدير عام (Super Admin)' : 'Super Admin',
                               onTap: () => _selectQuickRole(UserRole.superAdmin),
-                              color: const Color(0xFFEF4444),
+                              color: const Color(0xFF166534),
                             ),
                             _RoleChip(
                               label: isAr ? 'مزارع (Farmer)' : 'Farmer',
                               onTap: () => _selectQuickRole(UserRole.farmOwner),
                               color: AppColors.primaryGreen,
-                            ),
-                            _RoleChip(
-                              label: isAr ? 'فني (Technician)' : 'Technician',
-                              onTap: () => _selectQuickRole(UserRole.technician),
-                              color: const Color(0xFF06B6D4),
-                            ),
-                            _RoleChip(
-                              label: isAr ? 'عامل (Worker)' : 'Worker',
-                              onTap: () => _selectQuickRole(UserRole.farmWorker),
-                              color: const Color(0xFFF59E0B),
-                            ),
-                            _RoleChip(
-                              label: isAr ? 'مالية (Finance)' : 'Finance',
-                              onTap: () => _selectQuickRole(UserRole.financeManager),
-                              color: const Color(0xFF8B5CF6),
                             ),
                           ],
                         ),

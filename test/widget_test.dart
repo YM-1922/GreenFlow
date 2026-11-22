@@ -28,9 +28,6 @@ import 'package:greenflow/features/solar/presentation/screens/solar_screen.dart'
 import 'package:greenflow/features/subscriptions/presentation/screens/subscriptions_screen.dart';
 import 'package:greenflow/features/admin/presentation/screens/admin_dashboard_screen.dart';
 import 'package:greenflow/features/weather/presentation/screens/weather_screen.dart';
-import 'package:greenflow/features/technician/presentation/screens/technician_dashboard_screen.dart';
-import 'package:greenflow/features/worker/presentation/screens/worker_dashboard_screen.dart';
-import 'package:greenflow/features/finance/presentation/screens/finance_dashboard_screen.dart';
 import 'package:greenflow/features/authentication/presentation/screens/approval_waiting_screen.dart';
 import 'package:greenflow/core/auth/auth.dart';
 
@@ -746,7 +743,7 @@ void main() {
   });
 
   // ==========================================
-  // PHASE 11 TESTS - Admin Dashboard & RBAC
+  // SUPER ADMIN PORTAL TESTS (Reference Image 2)
   // ==========================================
   testWidgets('AdminDashboardScreen renders summary stats and team members',
       (WidgetTester tester) async {
@@ -757,10 +754,12 @@ void main() {
     await tester.pumpWidget(_buildTestApp(const AdminDashboardScreen()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Super Admin Management Console'), findsOneWidget);
-    expect(find.text('Total Accounts'), findsOneWidget);
-    expect(find.text('Active Farms'), findsOneWidget);
-    expect(find.text('KPIs & Overview'), findsOneWidget);
+    expect(find.text('System Super Admin'), findsOneWidget);
+    expect(find.text('Farmers'), findsOneWidget);
+    expect(find.text('Farms'), findsNWidgets(2)); // Metric card and bottom nav tab
+    expect(find.text('IoT Devices'), findsOneWidget);
+    expect(find.text('Active Subscriptions'), findsOneWidget);
+    expect(find.text('System Health'), findsOneWidget);
   });
 
   testWidgets('AdminDashboardScreen renders correctly in Arabic RTL',
@@ -774,9 +773,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('لوحة إدارة النظام العامة'), findsOneWidget);
-    expect(find.text('إجمالي الحسابات'), findsOneWidget);
-    expect(find.text('المزارع النشطة'), findsOneWidget);
+    expect(find.text('مسؤول النظام الرئيسي'), findsOneWidget);
+    expect(find.text('المزارعين'), findsOneWidget);
+    expect(find.text('المزارع'), findsNWidgets(2)); // Card label and bottom nav item
+    expect(find.text('الأجهزة (IoT)'), findsOneWidget);
+    expect(find.text('الاشتراكات الفعالة'), findsOneWidget);
+    expect(find.text('حالة الأنظمة'), findsOneWidget);
   });
 
   // ==========================================
@@ -862,47 +864,39 @@ void main() {
   });
 
   // ==========================================
-  // ROLE-BASED DASHBOARDS & AUTHENTICATION TESTS
+  // SUPER ADMIN & FARMER DUAL-ROLE ARCHITECTURE TESTS
   // ==========================================
 
-  testWidgets('TechnicianDashboardScreen renders assigned tasks and field operations',
+  testWidgets('AdminDashboardScreen allows switching between 5 bottom nav tabs',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(() => tester.view.resetPhysicalSize());
 
-    await tester.pumpWidget(_buildTestApp(const TechnicianDashboardScreen()));
+    await tester.pumpWidget(_buildTestApp(const AdminDashboardScreen()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Field Technician Dashboard'), findsOneWidget);
-    expect(find.text('Assigned Farms'), findsOneWidget);
-  });
+    // Verify 5 bottom navigation tabs
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Farms'), findsWidgets);
+    expect(find.text('Users'), findsOneWidget);
+    expect(find.text('Devices'), findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
 
-  testWidgets('WorkerDashboardScreen renders daily farm tasks and irrigation shortcut',
-      (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1080, 2400);
-    tester.view.devicePixelRatio = 2.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
-
-    await tester.pumpWidget(_buildTestApp(const WorkerDashboardScreen()));
+    // Switch to Users tab
+    await tester.tap(find.text('Users'));
     await tester.pumpAndSettle();
+    expect(find.text('User Management'), findsOneWidget);
 
-    expect(find.text('Agricultural Worker Dashboard'), findsOneWidget);
-    expect(find.text('Daily Farm Operations Checklist'), findsOneWidget);
-  });
-
-  testWidgets('FinanceDashboardScreen renders revenue overview, catalog and tabs',
-      (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1080, 2400);
-    tester.view.devicePixelRatio = 2.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
-
-    await tester.pumpWidget(_buildTestApp(const FinanceDashboardScreen()));
+    // Switch to Devices tab
+    await tester.tap(find.text('Devices'));
     await tester.pumpAndSettle();
+    expect(find.text('IoT Hardware Management'), findsOneWidget);
 
-    expect(find.text('Finance & Pricing Dashboard'), findsOneWidget);
-    expect(find.text('Revenue Overview'), findsOneWidget);
-    expect(find.text('Hardware Catalog'), findsOneWidget);
+    // Switch to More tab
+    await tester.tap(find.text('More'));
+    await tester.pumpAndSettle();
+    expect(find.text('Subscriptions'), findsOneWidget);
   });
 
   testWidgets('ApprovalWaitingScreen renders status banner and instant demo approval button',
@@ -918,7 +912,7 @@ void main() {
     expect(find.text('Simulate Approval & Enter Dashboard'), findsOneWidget);
   });
 
-  test('AuthService verifies roles, passwords, and permissions correctly', () {
+  test('AuthService verifies Super Admin and Farmer roles, passwords, and permissions correctly', () {
     final auth = AuthService();
 
     // 1. Super Admin login
@@ -927,24 +921,19 @@ void main() {
     expect(adminLogin.user?.role, UserRole.superAdmin);
     expect(PermissionService.canAccessSuperAdmin(UserRole.superAdmin), isTrue);
     expect(PermissionService.canManageUsers(UserRole.superAdmin), isTrue);
+    expect(PermissionService.canManagePricing(UserRole.superAdmin), isTrue);
 
-    // 2. Pending Farmer login returns isPendingApproval
+    // 2. Farmer login
+    final farmerLogin = auth.login('farmer_ahmed', 'Farmer@2026');
+    expect(farmerLogin.isSuccess, isTrue);
+    expect(farmerLogin.user?.role, UserRole.farmOwner);
+    expect(PermissionService.canAccessSuperAdmin(UserRole.farmOwner), isFalse);
+    expect(PermissionService.canManageUsers(UserRole.farmOwner), isFalse);
+    expect(PermissionService.canManageFarms(UserRole.farmOwner), isTrue);
+
+    // 3. Pending Farmer login returns isPendingApproval
     final pendingLogin = auth.login('farmer_khalid', 'Pending@2026');
     expect(pendingLogin.isPendingApproval, isTrue);
-
-    // 3. Field Technician permissions
-    expect(PermissionService.canAccessTechnicianDashboard(UserRole.technician), isTrue);
-    expect(PermissionService.canAccessSuperAdmin(UserRole.technician), isFalse);
-    expect(PermissionService.canManageUsers(UserRole.technician), isFalse);
-
-    // 4. Agricultural Worker permissions
-    expect(PermissionService.canAccessWorkerDashboard(UserRole.farmWorker), isTrue);
-    expect(PermissionService.canAccessFinance(UserRole.farmWorker), isFalse);
-
-    // 5. Finance Manager permissions
-    expect(PermissionService.canAccessFinance(UserRole.financeManager), isTrue);
-    expect(PermissionService.canManagePricing(UserRole.financeManager), isTrue);
-    expect(PermissionService.canManageUsers(UserRole.financeManager), isFalse);
   });
 
   test('AuthService hashPassword produces consistent and deterministic cross-platform hashes', () {

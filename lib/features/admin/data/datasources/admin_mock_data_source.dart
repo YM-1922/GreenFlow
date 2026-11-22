@@ -1,4 +1,4 @@
-/// Admin mock data source providing demo users and summary statistics.
+/// Admin mock data source providing demo users and summary statistics matching Reference Image 2.
 library;
 
 import '../../domain/entities/user_role_entities.dart';
@@ -37,8 +37,8 @@ class AdminMockDataSource {
       ),
       AppUserEntity(
         id: 'usr-002',
-        nameEn: 'Ahmed Al-Nour',
-        nameAr: 'أحمد النور',
+        nameEn: 'Ahmed Mahmoud',
+        nameAr: 'أحمد محمود',
         email: 'ahmed@alnour-farm.com',
         phone: '+20 111 234 5678',
         role: UserRole.farmOwner,
@@ -48,9 +48,9 @@ class AdminMockDataSource {
       ),
       AppUserEntity(
         id: 'usr-003',
-        nameEn: 'Fatima Khalil',
-        nameAr: 'فاطمة خليل',
-        email: 'fatima@palmvalley.ag',
+        nameEn: 'Mohamed Ali',
+        nameAr: 'محمد علي',
+        email: 'mohamed@oasis-palms.com',
         phone: '+20 112 345 6789',
         role: UserRole.farmOwner,
         farmId: 'farm-002',
@@ -59,22 +59,22 @@ class AdminMockDataSource {
       ),
       AppUserEntity(
         id: 'usr-004',
-        nameEn: 'Hassan Nabil',
-        nameAr: 'حسن نبيل',
-        email: 'hassan@greenflow.io',
+        nameEn: 'Sara Hassan',
+        nameAr: 'سارة حسن',
+        email: 'sara.hassan@greenflow.io',
         phone: '+20 100 456 7890',
-        role: UserRole.farmWorker,
-        farmId: 'farm-001',
-        isActive: false,
+        role: UserRole.systemAdmin,
+        farmId: null,
+        isActive: true,
         joinedAt: DateTime(2024, 7, 1),
       ),
       AppUserEntity(
         id: 'usr-005',
-        nameEn: 'Kareem Samir',
-        nameAr: 'كريم سمير',
-        email: 'kareem@iottech.dev',
+        nameEn: 'Mahmoud Ibrahim',
+        nameAr: 'محمود إبراهيم',
+        email: 'mahmoud@greenflow.io',
         phone: '+20 155 567 8901',
-        role: UserRole.technician,
+        role: UserRole.systemAdmin,
         farmId: null,
         isActive: true,
         joinedAt: DateTime(2024, 9, 14),
@@ -84,10 +84,10 @@ class AdminMockDataSource {
 
   AdminSummaryStats getSummaryStats() {
     return const AdminSummaryStats(
-      totalUsers: 24,
-      activeFarms: 8,
-      pendingInspections: 3,
-      activeDevices: 47,
+      totalUsers: 532,
+      activeFarms: 148,
+      pendingInspections: 4,
+      activeDevices: 784,
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/widgets/voice_assistant_speaker_button.dart';
 import '../../../farms/data/datasources/farms_mock_data_source.dart';
 import '../../../farms/domain/entities/farm_entities.dart';
 import '../../data/datasources/dashboard_mock_data_source.dart';
@@ -54,6 +55,17 @@ class _FarmerMonitoringScreenState extends State<FarmerMonitoringScreen> with Si
           isAr ? 'مراقبة التربة والمناخ الزراعي' : 'Agri-Telemetry & Soil Monitoring',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
         ),
+        actions: [
+          VoiceAssistantSpeakerButton(
+            arabicMessage: isAr
+                ? (_metrics.soilMoisture < 30
+                    ? 'التربة محتاجة مياه، متوسط الرطوبة منخفض.'
+                    : 'التربة بحالة جيدة والحرارة مناسبة للزراعة.')
+                : 'Soil is in good condition and temperature is suitable.',
+            englishMessage: 'Soil is in good condition and temperature is suitable.',
+          ),
+          const SizedBox(width: 8),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.primaryGreen,

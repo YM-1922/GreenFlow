@@ -298,26 +298,13 @@ class FarmsMockDataSource {
     final currentUser = user ?? AuthService().currentUser;
     if (currentUser == null) return List.unmodifiable(_farms);
 
-    if (currentUser.role == UserRole.superAdmin || currentUser.role == UserRole.financeManager) {
+    if (currentUser.role == UserRole.superAdmin) {
       return List.unmodifiable(_farms);
     }
 
     if (currentUser.role == UserRole.farmOwner) {
       return List.unmodifiable(
         _farms.where((f) => PermissionService.canAccessFarm(currentUser, f.id, ownerUserId: f.ownerUserId)),
-      );
-    }
-
-    if (currentUser.role == UserRole.technician) {
-      return List.unmodifiable(
-        _farms.where((f) => currentUser.assignedFarmIds.contains(f.id) || currentUser.assignedFarmId == f.id),
-      );
-    }
-
-    if (currentUser.role == UserRole.farmWorker) {
-      if (currentUser.assignedFarmId == null) return const [];
-      return List.unmodifiable(
-        _farms.where((f) => f.id == currentUser.assignedFarmId),
       );
     }
 
@@ -403,14 +390,6 @@ class FarmsMockDataSource {
         _inspectionRequests.where((r) =>
             r.customerUserId == currentUser.id ||
             (r.farmId != null && PermissionService.canAccessFarm(currentUser, r.farmId!))),
-      );
-    }
-
-    if (currentUser.role == UserRole.technician) {
-      return List.unmodifiable(
-        _inspectionRequests.where((r) =>
-            r.assignedTechnicianId == currentUser.id ||
-            (r.farmId != null && currentUser.assignedFarmIds.contains(r.farmId))),
       );
     }
 

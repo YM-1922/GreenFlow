@@ -32,9 +32,12 @@ class AppStrings {
   // Splash & Initialization
   static String initializingTelemetry(BuildContext context) => get(
         context,
-        en: 'Initializing IoT Telemetry Engine...',
-        ar: 'جاري تهيئة محرك إنترنت الأشياء والبيانات...',
+        en: 'Preparing your smart experience...',
+        ar: 'جاري تجهيز تجربتك الذكية ...',
       );
+
+  static String previous(BuildContext context) =>
+      get(context, en: 'Previous', ar: 'السابق');
 
   static String esp32Ready(BuildContext context) => get(
         context,
@@ -63,32 +66,32 @@ class AppStrings {
 
   // Onboarding Page 1: Smart Agriculture
   static String onboardingTitle1(BuildContext context) =>
-      get(context, en: 'Smart Agriculture', ar: 'الزراعة الذكية');
+      get(context, en: 'Smart Agriculture', ar: 'زراعة أكثر ذكاءً');
 
   static String onboardingDesc1(BuildContext context) => get(
         context,
-        en: 'Harness the power of intelligent farming. Monitor micro-climates, enhance crop health, and automate daily field operations effortlessly.',
-        ar: 'استفد من قوة الزراعة الذكية الحديثة لمراقبة المناخ الدقيق، وتعزيز صحة المحاصيل، وأتمتة العمليات الحقلية بكل سهولة.',
+        en: 'Manage your farm using smart technology, and make every decision more accurate and efficient.',
+        ar: 'أدر مزرعتك باستخدام التكنولوجيا الذكية، واجعل كل قرار أكثر دقة وكفاءة.',
       );
 
   // Onboarding Page 2: Smart Irrigation
   static String onboardingTitle2(BuildContext context) =>
-      get(context, en: 'Smart Irrigation', ar: 'الري الذكي الدقيق');
+      get(context, en: 'Save Water, Produce More', ar: 'وفر الماء، وانتج أكثر');
 
   static String onboardingDesc2(BuildContext context) => get(
         context,
-        en: 'Intelligent water management at your fingertips. Automate valves and pumps based on live soil moisture to save up to 40% water.',
-        ar: 'إدارة مائية ذكية بين يديك. تحكم آلي بالصمامات والمضخات وفق مستويات رطوبة التربة الفعلية مع توفير حتى 40% من استهلاك المياه.',
+        en: 'Smart control of irrigation systems to reduce water waste and improve crop growth.',
+        ar: 'تحكّم ذكي في أنظمة الري لتقليل هدر المياه وتحسين نمو المحاصيل.',
       );
 
   // Onboarding Page 3: Plant & Sensor Monitoring
   static String onboardingTitle3(BuildContext context) =>
-      get(context, en: 'Plant & Sensor Monitoring', ar: 'مراقبة النباتات والمجسات');
+      get(context, en: 'Always Connected Farm', ar: 'مزرعتك متصلة دائمًا');
 
   static String onboardingDesc3(BuildContext context) => get(
         context,
-        en: 'Real-time telemetry from ESP32 edge nodes. Receive immediate alerts on temperature, soil deficiency, and environmental changes.',
-        ar: 'بيانات استشعار حية من وحدات ESP32 الطرفية مع تنبيهات فورية لتغيرات الحرارة، ونقص خصوبة ورطوبة التربة والمناخ.',
+        en: 'Monitor soil moisture, temperature, air humidity, and smart devices in real time from anywhere.',
+        ar: 'راقب رطوبة التربة ودرجة الحرارة والرطوبة الجوية وأجهزتك الذكية بشكل لحظي ومن أي مكان.',
       );
 
   // Authentication Strings

@@ -15,7 +15,6 @@ import '../../features/farms/presentation/screens/farms_list_screen.dart';
 import '../../features/farms/presentation/screens/inspection_details_screen.dart';
 import '../../features/farms/presentation/screens/inspection_request_screen.dart';
 import '../../features/farms/presentation/screens/inspections_list_screen.dart';
-import '../../features/finance/presentation/screens/finance_dashboard_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/irrigation/presentation/screens/irrigation_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
@@ -24,11 +23,10 @@ import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/solar/presentation/screens/solar_screen.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/subscriptions/presentation/screens/subscriptions_screen.dart';
-import '../../features/technician/presentation/screens/technician_dashboard_screen.dart';
 import '../../features/weather/presentation/screens/weather_screen.dart';
-import '../../features/worker/presentation/screens/worker_dashboard_screen.dart';
 
 /// Centralized route definitions, role guards, and route generator for Green Flow.
+/// Supports exclusively the two primary platform roles: Super Admin and Farmer.
 class AppRoutes {
   AppRoutes._();
 
@@ -54,37 +52,17 @@ class AppRoutes {
   static const String notifications = '/notifications';
   static const String subscriptions = '/subscriptions';
   static const String admin = '/admin';
-  static const String technicianDashboard = '/technician';
-  static const String workerDashboard = '/worker';
-  static const String financeDashboard = '/finance';
   static const String weather = '/weather';
   static const String profile = '/profile';
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     final user = AuthService().currentUser;
 
-    // Route Guards for Restricted Roles
-    switch (settings.name) {
-      case admin:
-        if (user != null && !PermissionService.canAccessSuperAdmin(user.role)) {
-          return _accessDeniedRoute('Super Admin permissions required.', settings);
-        }
-        break;
-      case financeDashboard:
-        if (user != null && !PermissionService.canAccessFinance(user.role)) {
-          return _accessDeniedRoute('Finance Manager permissions required.', settings);
-        }
-        break;
-      case technicianDashboard:
-        if (user != null && !PermissionService.canAccessTechnicianDashboard(user.role)) {
-          return _accessDeniedRoute('Technician permissions required.', settings);
-        }
-        break;
-      case workerDashboard:
-        if (user != null && !PermissionService.canAccessWorkerDashboard(user.role)) {
-          return _accessDeniedRoute('Agricultural Worker permissions required.', settings);
-        }
-        break;
+    // Route Guards for Restricted Super Admin Role
+    if (settings.name == admin) {
+      if (user != null && !PermissionService.canAccessSuperAdmin(user.role)) {
+        return _accessDeniedRoute('Super Admin permissions required.', settings);
+      }
     }
 
     switch (settings.name) {
@@ -138,12 +116,6 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const SubscriptionsScreen(), settings: settings);
       case admin:
         return MaterialPageRoute(builder: (_) => const AdminDashboardScreen(), settings: settings);
-      case technicianDashboard:
-        return MaterialPageRoute(builder: (_) => const TechnicianDashboardScreen(), settings: settings);
-      case workerDashboard:
-        return MaterialPageRoute(builder: (_) => const WorkerDashboardScreen(), settings: settings);
-      case financeDashboard:
-        return MaterialPageRoute(builder: (_) => const FinanceDashboardScreen(), settings: settings);
       case weather:
         return MaterialPageRoute(builder: (_) => const WeatherScreen(), settings: settings);
       case profile:

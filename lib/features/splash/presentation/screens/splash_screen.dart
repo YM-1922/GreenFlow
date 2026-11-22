@@ -1,16 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../app/routes/app_routes.dart';
-import '../../../../app/app.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/utils/file_io.dart' as file_io;
 import '../../../../core/widgets/app_logo.dart';
-import '../../../../core/widgets/iot_pulse_indicator.dart';
-import '../../../../core/widgets/status_badge.dart';
 
-/// Modern, animated splash screen showcasing Green Flow branding,
-/// agricultural IoT ecosystem readiness, and bilingual (EN/AR) responsiveness.
+/// Clean, nature-inspired Splash Screen faithfully matching the Green Flow reference design.
+/// Features the Green Flow logo, brand typography, subtitle, lower agricultural landscape,
+/// and smooth circular loading animation with bilingual status.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -18,410 +16,302 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin {
-  late final AnimationController _mainController;
-  late final AnimationController _pulseController;
-
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
   late final Animation<double> _fadeAnimation;
   late final Animation<double> _scaleAnimation;
-  late final Animation<Offset> _slideAnimation;
+  Timer? _navTimer;
 
-  int _telemetryStage = 0;
-  Timer? _telemetryTimer;
-  Timer? _navigationTimer;
+  static const String _onboardingPrefFile = '.greenflow_onboarding_pref';
 
   @override
   void initState() {
     super.initState();
 
-    _mainController = AnimationController(
+    _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1200),
     );
 
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat(reverse: true);
-
     _fadeAnimation = CurvedAnimation(
-      parent: _mainController,
+      parent: _animController,
       curve: Curves.easeOutCubic,
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.82, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.88, end: 1.0).animate(
       CurvedAnimation(
-        parent: _mainController,
+        parent: _animController,
         curve: Curves.easeOutBack,
       ),
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.18),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _mainController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
+    _animController.forward();
 
-    _mainController.forward();
+    // 2.8s smooth splash delay, checking onboarding completion
+    _navTimer = Timer(const Duration(milliseconds: 2800), _navigateNext);
+  }
 
-    // Telemetry cycle simulation to demonstrate IoT sensor handshake
-    _telemetryTimer = Timer.periodic(const Duration(milliseconds: 900), (timer) {
-      if (mounted && _telemetryStage < 2) {
-        setState(() {
-          _telemetryStage++;
-        });
-      } else {
-        timer.cancel();
-      }
-    });
+  void _navigateNext() {
+    if (!mounted) return;
+
+    final pref = file_io.readFileSync(_onboardingPrefFile)?.trim();
+    final bool hasCompletedOnboarding = pref == 'completed';
+
+    if (hasCompletedOnboarding) {
+      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+    } else {
+      Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
+    }
   }
 
   @override
   void dispose() {
-    _telemetryTimer?.cancel();
-    _navigationTimer?.cancel();
-    _mainController.dispose();
-    _pulseController.dispose();
+    _navTimer?.cancel();
+    _animController.dispose();
     super.dispose();
-  }
-
-  void _navigateToNext() {
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
   }
 
   @override
   Widget build(BuildContext context) {
     final isArabic = AppStrings.isArabic(context);
-    final size = MediaQuery.sizeOf(context);
-
-    final telemetryLabelsEn = [
-      'Calibrating Soil & Ambient Sensors...',
-      'Connecting ESP32 Mesh Gateway...',
-      'IoT Telemetry & Smart Irrigation Online',
-    ];
-
-    final telemetryLabelsAr = [
-      'معايرة مجسات التربة والبيئة...',
-      'الاتصال ببوابة شبكة ESP32...',
-      'جاهزية أتمتة الري وإنترنت الأشياء نشطة',
-    ];
-
-    final currentTelemetryLabel = isArabic
-        ? telemetryLabelsAr[_telemetryStage]
-        : telemetryLabelsEn[_telemetryStage];
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppColors.splashGradient,
-        ),
-        child: SafeArea(
-          child: Stack(
-            children: [
-              // 1. Ambient Background Glows
-              Positioned(
-                top: -size.width * 0.25,
-                left: -size.width * 0.2,
-                child: Container(
-                  width: size.width * 0.9,
-                  height: size.width * 0.9,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primaryGreen.withValues(alpha: 0.12),
-                  ),
+      backgroundColor: AppColors.backgroundLight,
+      body: Stack(
+        children: [
+          // Subtle natural leaf decorations in background corners
+          Positioned(
+            top: -20,
+            left: -20,
+            child: Opacity(
+              opacity: 0.18,
+              child: Transform.rotate(
+                angle: 0.4,
+                child: const Icon(
+                  Icons.eco_rounded,
+                  size: 140,
+                  color: AppColors.primaryGreen,
                 ),
               ),
-              Positioned(
-                bottom: -size.width * 0.3,
-                right: -size.width * 0.2,
-                child: Container(
-                  width: size.width * 1.0,
-                  height: size.width * 1.0,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.flowBlue.withValues(alpha: 0.10),
-                  ),
-                ),
-              ),
-
-              // 2. Top Bar: Language Switcher & Version Badge
-              Positioned(
-                top: 12,
-                left: 16,
-                right: 16,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // System Mode Badge
-                    StatusBadge(
-                      label: isArabic ? 'نظام زراعي ذكي' : 'Smart Agri IoT',
-                      color: AppColors.primaryGreenLight,
-                      icon: Icons.eco_rounded,
-                    ),
-
-                    // Language Toggle (Allows instant live testing of LTR/RTL)
-                    InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: () {
-                        final newLocale = isArabic
-                            ? const Locale('en')
-                            : const Locale('ar');
-                        GreenFlowApp.setLocale(context, newLocale);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.language_rounded,
-                              size: 15,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              isArabic ? 'English' : 'العربية',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // 3. Central Brand Experience
-              Center(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 28),
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: SlideTransition(
-                        position: _slideAnimation,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Animated Logo with subtle breathing pulse
-                            AnimatedBuilder(
-                              animation: _pulseController,
-                              builder: (context, child) {
-                                final breathingScale =
-                                    1.0 + (_pulseController.value * 0.035);
-                                return Transform.scale(
-                                  scale: breathingScale,
-                                  child: child,
-                                );
-                              },
-                              child: ScaleTransition(
-                                scale: _scaleAnimation,
-                                child: const GreenFlowLogo(
-                                  size: 140,
-                                  showGlow: true,
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 32),
-
-                            // Brand Title with Gradient Shader
-                            ShaderMask(
-                              shaderCallback: (bounds) =>
-                                  AppColors.brandGradient.createShader(bounds),
-                              child: Text(
-                                isArabic
-                                    ? AppConstants.appNameAr
-                                    : AppConstants.appName,
-                                style: const TextStyle(
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            // Tagline (Bilingual)
-                            Text(
-                              isArabic
-                                  ? AppConstants.appTaglineAr
-                                  : AppConstants.appTaglineEn,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFFE2E8F0),
-                                letterSpacing: 0.3,
-                                height: 1.3,
-                              ),
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            // Subtext / Capabilities
-                            Text(
-                              isArabic
-                                  ? AppConstants.appSubtextAr
-                                  : AppConstants.appSubtextEn,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.white.withValues(alpha: 0.65),
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-
-                            const SizedBox(height: 40),
-
-                            // IoT Feature Badges (Horizontal Row)
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              alignment: WrapAlignment.center,
-                              children: [
-                                StatusBadge(
-                                  label: isArabic
-                                      ? 'رطوبة التربة'
-                                      : 'Soil Moisture',
-                                  color: AppColors.primaryGreenLight,
-                                  icon: Icons.grass_rounded,
-                                ),
-                                StatusBadge(
-                                  label: isArabic
-                                      ? 'صمامات الري'
-                                      : 'Smart Valves',
-                                  color: AppColors.flowBlueLight,
-                                  icon: Icons.water_drop_rounded,
-                                ),
-                                StatusBadge(
-                                  label: isArabic ? 'عقد ESP32' : 'ESP32 Telemetry',
-                                  color: AppColors.sensorOnline,
-                                  icon: Icons.sensors_rounded,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              // 4. Bottom IoT Initialization Status & Action
-              Positioned(
-                bottom: 24,
-                left: 20,
-                right: 20,
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // IoT Telemetry Status Card
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.15),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            IotPulseIndicator(
-                              size: 10,
-                              color: _telemetryStage == 2
-                                  ? AppColors.sensorOnline
-                                  : AppColors.flowBlueLight,
-                            ),
-                            const SizedBox(width: 12),
-                            Flexible(
-                              child: Text(
-                                currentTelemetryLabel,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFFF1F5F9),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Manual Explore / Next button for previewing navigation
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primaryGreen,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            elevation: 0,
-                          ),
-                          onPressed: _navigateToNext,
-                          icon: Icon(
-                            isArabic
-                                ? Icons.arrow_back_rounded
-                                : Icons.arrow_forward_rounded,
-                            size: 18,
-                          ),
-                          label: Text(
-                            isArabic ? 'دخول التطبيق' : 'Enter Application',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            top: 40,
+            right: -30,
+            child: Opacity(
+              opacity: 0.12,
+              child: Transform.rotate(
+                angle: -0.6,
+                child: const Icon(
+                  Icons.eco_rounded,
+                  size: 110,
+                  color: AppColors.primaryGreenLight,
+                ),
+              ),
+            ),
+          ),
+
+          // Lower Section: Natural Agricultural Landscape
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.of(context).size.height * 0.40,
+            child: CustomPaint(
+              painter: _SplashLandscapePainter(),
+            ),
+          ),
+
+          // Center Branding Content
+          SafeArea(
+            child: Column(
+              children: [
+                const Spacer(flex: 3),
+
+                // Animated Logo and Typography
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Iconic Double Leaf Emblem
+                        const GreenFlowLogo(size: 110),
+                        const SizedBox(height: 18),
+
+                        // Brand Name "Green Flow"
+                        const Text(
+                          'Green Flow',
+                          style: TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                            color: AppColors.primaryGreenDark,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Subtitle: "— Smart Agriculture —"
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 1.5,
+                              color: AppColors.textSecondaryLight.withValues(alpha: 0.5),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Smart Agriculture',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 0.8,
+                                color: AppColors.textSecondaryLight,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              width: 24,
+                              height: 1.5,
+                              color: AppColors.textSecondaryLight.withValues(alpha: 0.5),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const Spacer(flex: 4),
+
+                // Lower section: Circular loading indicator & status
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 36),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3.2,
+                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryGreen),
+                            backgroundColor: AppColors.softSage.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          isArabic
+                              ? 'جاري تجهيز تجربتك الذكية ...'
+                              : 'Preparing your smart experience...',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+/// Custom painter for the lower natural agricultural landscape seen in the design reference.
+class _SplashLandscapePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Distant morning misty hills
+    final distantHill = Paint()..color = const Color(0xFFC7D2FE).withValues(alpha: 0.35);
+    final dPath = Path()
+      ..moveTo(0, h * 0.35)
+      ..cubicTo(w * 0.3, h * 0.28, w * 0.6, h * 0.38, w, h * 0.30)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+    canvas.drawPath(dPath, distantHill);
+
+    // Warm morning sun glow horizon
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0, -0.4),
+        radius: 0.8,
+        colors: [
+          const Color(0xFFFEF3C7).withValues(alpha: 0.8),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, w, h * 0.6));
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, h * 0.6), glowPaint);
+
+    // Treeline silhouette along horizon
+    final treePaint = Paint()..color = const Color(0xFF14532D).withValues(alpha: 0.55);
+    for (double x = 0; x < w; x += 14) {
+      canvas.drawCircle(Offset(x, h * 0.36), 7, treePaint);
+    }
+
+    // Rich perspective agricultural crop rows
+    final fieldPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFF15803D),
+          Color(0xFF166534),
+          Color(0xFF14532D),
+        ],
+      ).createShader(Rect.fromLTWH(0, h * 0.38, w, h * 0.62));
+    canvas.drawRect(Rect.fromLTWH(0, h * 0.38, w, h * 0.62), fieldPaint);
+
+    // Perspective furrow lines with detailed lush green crops
+    final furrowPaint = Paint()
+      ..color = const Color(0xFF0F3E1E)
+      ..strokeWidth = 2.0;
+    final plantPaint = Paint()..color = const Color(0xFF22C55E);
+
+    final vanishPoint = Offset(w * 0.5, h * 0.38);
+
+    for (int i = 0; i <= 10; i++) {
+      final bottomX = -w * 0.2 + (w * 1.4) * (i / 10);
+      canvas.drawLine(vanishPoint, Offset(bottomX, h), furrowPaint);
+
+      // Plant mounds along furrow
+      for (double t = 0.15; t <= 1.0; t += 0.12) {
+        final cx = vanishPoint.dx + (bottomX - vanishPoint.dx) * t;
+        final cy = vanishPoint.dy + (h - vanishPoint.dy) * t;
+        final r = 2.5 + t * 6.5;
+        canvas.drawCircle(Offset(cx - 3, cy), r, plantPaint);
+        canvas.drawCircle(Offset(cx + 3, cy), r * 0.9, plantPaint);
+      }
+    }
+
+    // Organic soft top wave overlay transition into white
+    final topWave = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          AppColors.backgroundLight,
+          AppColors.backgroundLight.withValues(alpha: 0.75),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.28, 0.55],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, h), topWave);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
