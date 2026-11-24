@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/backend/firebase_config.dart';
@@ -44,6 +45,10 @@ class _SimulationQrDialogState extends State<SimulationQrDialog> {
   late bool _simulatedAuto;
   final List<String> _consoleLogs = [];
 
+  // Live telemetry stream from Python bridge / Firebase
+  StreamSubscription<Map<String, dynamic>>? _telemetrySubscription;
+  StreamSubscription<bool>? _pumpSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -62,10 +67,42 @@ class _SimulationQrDialogState extends State<SimulationQrDialog> {
     _addLog('[ESP32 Boot] Xtensa Dual-Core 240MHz. GreenFlow IoT Firmware v2.0 ready.');
     _addLog('[WiFi] Connected to GreenFlow Gateway. IP: 192.168.1.145');
     _addLog('[Sensors] DHT22 (GPIO 15) & Soil ADC (GPIO 34) active.');
+
+    // ── Live stream: Python bridge updates the slider & pump in real-time ──
+    _telemetrySubscription =
+        FirebaseRealtimeService.instance.streamTelemetry().listen((data) {
+      if (!mounted) return;
+      final soil = (data['soilMoisture'] as num?)?.toDouble();
+      final temp = (data['temperature'] as num?)?.toDouble();
+      final hum  = (data['humidity']     as num?)?.toDouble();
+      final pump = data['pumpStatus']    as bool?;
+      final auto = data['autoMode']      as bool?;
+
+      setState(() {
+        if (soil != null && soil != _simulatedSoilMoisture) {
+          // Log auto-stop event when pump just turned off after reaching target
+          if (_simulatedPump && pump == false && soil >= 60.0) {
+            _addLog('[Auto-Stop] Soil ${soil.toStringAsFixed(1)}% >= 60% → Pump OFF ⏸️');
+          }
+          // Log auto-start event
+          if (!_simulatedPump && pump == true && soil < 30.0) {
+            final tag = (_simulatedAuto) ? '[Auto-Start]' : '[Drought Protection]';
+            _addLog('$tag Soil ${soil.toStringAsFixed(1)}% < 30% → Pump ON 💧');
+          }
+          _simulatedSoilMoisture = soil;
+        }
+        if (temp != null) _simulatedTemp = temp;
+        if (hum  != null) _simulatedHum  = hum;
+        if (pump != null) _simulatedPump  = pump;
+        if (auto != null) _simulatedAuto  = auto;
+      });
+    });
   }
 
   @override
   void dispose() {
+    _telemetrySubscription?.cancel();
+    _pumpSubscription?.cancel();
     _urlController.dispose();
     _tokenController.dispose();
     super.dispose();
@@ -156,6 +193,13 @@ class _SimulationQrDialogState extends State<SimulationQrDialog> {
         _addLog('[Auto Threshold] Soil ${value.toStringAsFixed(1)}% < 30% -> Relay CLOSED (Pump ON 💦)');
       } else if (value >= 60.0 && currentPump) {
         _addLog('[Auto Threshold] Soil ${value.toStringAsFixed(1)}% >= 60% -> Relay OPEN (Pump OFF ⏸️)');
+      }
+    } else {
+      // Manual Mode Emergency Drought Protection
+      if (value < 30.0 && !currentPump) {
+        _addLog('[Drought Protection] Soil ${value.toStringAsFixed(1)}% < 30% in Manual -> Relay CLOSED (Pump ON 💦)');
+      } else if (value >= 60.0 && currentPump) {
+        _addLog('[Target Reached] Soil ${value.toStringAsFixed(1)}% >= 60% -> Relay OPEN (Pump OFF ⏸️)');
       }
     }
 

@@ -2,16 +2,64 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Start ESP32 Python Simulator",
+      "label": "Start Green Flow ESP32 Simulator",
       "type": "shell",
-      "command": "python hardware_simulation/virtual_esp32.py",
+      "command": "C:\\Users\\Joo\\AppData\\Local\\Python\\bin\\python.exe",
+      "args": ["hardware_simulation/virtual_esp32.py"],
       "isBackground": true,
       "presentation": {
         "reveal": "always",
         "panel": "new",
-        "focus": true
+        "group": "greenflow",
+        "focus": false,
+        "echo": true,
+        "close": false,
+        "label": "🌿 ESP32 Simulator"
       },
-      "problemMatcher": []
+      "problemMatcher": {
+        "owner": "python",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "GREEN FLOW",
+          "endsPattern": "HTTP Bridge listening"
+        }
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "Flutter Run Web",
+      "type": "shell",
+      "command": "C:\\Users\\Joo\\devolop\\flutter\\bin\\flutter.bat",
+      "args": ["run", "-d", "chrome"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "group": "greenflow",
+        "focus": true,
+        "label": "🌐 Flutter Web"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": ["Start Green Flow ESP32 Simulator"]
+    },
+    {
+      "label": "🌿 Green Flow: Run All",
+      "dependsOn": ["Start Green Flow ESP32 Simulator", "Flutter Run Web"],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
     }
   ]
 }

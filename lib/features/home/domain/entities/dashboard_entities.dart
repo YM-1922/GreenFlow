@@ -34,6 +34,28 @@ class EnvironmentalMetricEntity {
     required this.dailyWaterConsumptionLiters,
     required this.vsYesterdayPercent,
   });
+
+  EnvironmentalMetricEntity copyWith({
+    double? soilMoisture,
+    String? soilMoistureStatus,
+    double? temperatureCelsius,
+    bool? isHighTemperatureWarning,
+    double? airHumidity,
+    double? dailyWaterConsumptionLiters,
+    double? vsYesterdayPercent,
+  }) {
+    return EnvironmentalMetricEntity(
+      soilMoisture: soilMoisture ?? this.soilMoisture,
+      soilMoistureStatus: soilMoistureStatus ?? this.soilMoistureStatus,
+      temperatureCelsius: temperatureCelsius ?? this.temperatureCelsius,
+      isHighTemperatureWarning:
+          isHighTemperatureWarning ?? this.isHighTemperatureWarning,
+      airHumidity: airHumidity ?? this.airHumidity,
+      dailyWaterConsumptionLiters:
+          dailyWaterConsumptionLiters ?? this.dailyWaterConsumptionLiters,
+      vsYesterdayPercent: vsYesterdayPercent ?? this.vsYesterdayPercent,
+    );
+  }
 }
 
 /// Smart Irrigation Status and Actuator state.

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../core/backend/firebase_realtime_service.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/connectivity_banner.dart';
@@ -29,6 +31,7 @@ class FarmerHomeContent extends StatefulWidget {
 
 class _FarmerHomeContentState extends State<FarmerHomeContent> {
   final NotificationsMockDataSource _notificationsSource = NotificationsMockDataSource();
+  StreamSubscription<Map<String, dynamic>>? _telemetrySub;
 
   late FarmSummaryEntity _farmSummary;
   late EnvironmentalMetricEntity _environmentalMetrics;
@@ -42,10 +45,40 @@ class _FarmerHomeContentState extends State<FarmerHomeContent> {
     super.initState();
     _notificationsSource.addListener(_onNotificationsChanged);
     _loadDashboardData();
+    _subscribeToLiveTelemetry();
+  }
+
+  void _subscribeToLiveTelemetry() {
+    _telemetrySub = FirebaseRealtimeService.instance.streamTelemetry().listen((data) {
+      if (!mounted) return;
+      final soil = (data['soilMoisture'] as num?)?.toDouble();
+      final temp = (data['temperature'] as num?)?.toDouble();
+      final hum = (data['humidity'] as num?)?.toDouble();
+      final pump = data['pumpStatus'] as bool?;
+
+      setState(() {
+        if (soil != null || temp != null || hum != null) {
+          final currentSoil = soil ?? _environmentalMetrics.soilMoisture;
+          final status = currentSoil < 30.0
+              ? 'Low'
+              : (currentSoil >= 60.0 ? 'High' : 'Optimal');
+          _environmentalMetrics = _environmentalMetrics.copyWith(
+            soilMoisture: currentSoil,
+            soilMoistureStatus: status,
+            temperatureCelsius: temp ?? _environmentalMetrics.temperatureCelsius,
+            airHumidity: hum ?? _environmentalMetrics.airHumidity,
+          );
+        }
+        if (pump != null && pump != _irrigationStatus.isPumpActive) {
+          _irrigationStatus = _irrigationStatus.copyWith(isPumpActive: pump);
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
+    _telemetrySub?.cancel();
     _notificationsSource.removeListener(_onNotificationsChanged);
     super.dispose();
   }

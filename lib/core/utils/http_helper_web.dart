@@ -23,20 +23,24 @@ Future<HttpResponseData> httpGet(String url, {Map<String, String>? headers}) asy
   headers?.forEach((k, v) => request.setRequestHeader(k, v));
 
   request.onLoadEnd.listen((_) {
-    final status = request.status ?? 0;
-    completer.complete(HttpResponseData(
-      statusCode: status,
-      body: request.responseText ?? '',
-      isSuccess: status >= 200 && status < 300,
-    ));
+    if (!completer.isCompleted) {
+      final status = request.status ?? 0;
+      completer.complete(HttpResponseData(
+        statusCode: status,
+        body: request.responseText ?? '',
+        isSuccess: status >= 200 && status < 300,
+      ));
+    }
   });
 
   request.onError.listen((_) {
-    completer.complete(const HttpResponseData(
-      statusCode: 500,
-      body: 'Network Error',
-      isSuccess: false,
-    ));
+    if (!completer.isCompleted) {
+      completer.complete(const HttpResponseData(
+        statusCode: 500,
+        body: 'Network Error',
+        isSuccess: false,
+      ));
+    }
   });
 
   request.send();
@@ -59,20 +63,24 @@ Future<HttpResponseData> httpPut(String url, String body, {Map<String, String>? 
   headers?.forEach((k, v) => request.setRequestHeader(k, v));
 
   request.onLoadEnd.listen((_) {
-    final status = request.status ?? 0;
-    completer.complete(HttpResponseData(
-      statusCode: status,
-      body: request.responseText ?? '',
-      isSuccess: status >= 200 && status < 300,
-    ));
+    if (!completer.isCompleted) {
+      final status = request.status ?? 0;
+      completer.complete(HttpResponseData(
+        statusCode: status,
+        body: request.responseText ?? '',
+        isSuccess: status >= 200 && status < 300,
+      ));
+    }
   });
 
   request.onError.listen((_) {
-    completer.complete(const HttpResponseData(
-      statusCode: 500,
-      body: 'Network Error',
-      isSuccess: false,
-    ));
+    if (!completer.isCompleted) {
+      completer.complete(const HttpResponseData(
+        statusCode: 500,
+        body: 'Network Error',
+        isSuccess: false,
+      ));
+    }
   });
 
   request.send(body);
@@ -95,20 +103,24 @@ Future<HttpResponseData> httpPost(String url, String body, {Map<String, String>?
   headers?.forEach((k, v) => request.setRequestHeader(k, v));
 
   request.onLoadEnd.listen((_) {
-    final status = request.status ?? 0;
-    completer.complete(HttpResponseData(
-      statusCode: status,
-      body: request.responseText ?? '',
-      isSuccess: status >= 200 && status < 300,
-    ));
+    if (!completer.isCompleted) {
+      final status = request.status ?? 0;
+      completer.complete(HttpResponseData(
+        statusCode: status,
+        body: request.responseText ?? '',
+        isSuccess: status >= 200 && status < 300,
+      ));
+    }
   });
 
   request.onError.listen((_) {
-    completer.complete(const HttpResponseData(
-      statusCode: 500,
-      body: 'Network Error',
-      isSuccess: false,
-    ));
+    if (!completer.isCompleted) {
+      completer.complete(const HttpResponseData(
+        statusCode: 500,
+        body: 'Network Error',
+        isSuccess: false,
+      ));
+    }
   });
 
   request.send(body);

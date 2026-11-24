@@ -1,21 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Green Flow - ESP32 Smart Agriculture Virtual Hardware & Live Bridge
-====================================================================
-Simulates the 5 Farm Devices + Live Two-Way Sync with Flutter Web App.
+===========================================================================
+  GREEN FLOW  -  ESP32 Smart Agriculture  -  Virtual Hardware Bridge
+===========================================================================
+  Simulates the 5 Farm IoT Devices + Live Two-Way Sync with the Flutter App.
 
-HOW IT WORKS:
-  - Shows all 5 IoT devices from the Devices Page when it starts.
-  - Runs an HTTP bridge on http://127.0.0.1:8088
-  - Flutter app sends slider values → POST /control
-  - Flutter app reads live state   → GET  /telemetry
-  - If soilMoisture < 30%  → Pump AUTO-ON, moisture rises ~4%/sec
-  - When moisture reaches 60%     → Pump AUTO-STOPS
+  WHAT IT DOES:
+    * Shows all 5 connected devices (from the Devices page) on startup.
+    * Runs an HTTP bridge on http://127.0.0.1:8088
+      - Flutter slider  -> POST /control  (sends soilMoisture, pumpStatus, autoMode)
+      - Flutter polls   -> GET  /telemetry (reads live state)
+    * "Start Irrigation Now" button on Home page -> triggers pump ON via /control
+    * Built-in Simulator slider -> updates soilMoisture live in terminal
+    * AUTO-IRRIGATION LOGIC:
+        soilMoisture < 30%  -> Pump turns ON automatically
+        Moisture rises ~4% per cycle (1.5 s) while pump is ON
+        soilMoisture >= 60% -> Pump stops automatically
+        Terminal shows live progress bar on every cycle
 
-USAGE:
-  python hardware_simulation/virtual_esp32.py
-  (or double-click run_greenflow.bat to launch everything)
+  USAGE:
+    python hardware_simulation/virtual_esp32.py
+    -- OR --
+    Double-click  run_greenflow.bat  (launches simulator + Flutter together)
+
+  REQUIREMENTS:  Python 3.8+  (stdlib only, no pip packages needed)
+===========================================================================
 """
 
 import sys
@@ -25,15 +35,19 @@ import random
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-# ── Windows UTF-8 fix ───────────────────────────────────────────────────────
-if sys.platform == 'win32':
+# ---------------------------------------------------------------------------
+# Windows UTF-8 fix (safe – ignored on Mac/Linux)
+# ---------------------------------------------------------------------------
+if sys.platform == "win32":
     try:
-        sys.stdout.reconfigure(encoding='utf-8')
-        sys.stderr.reconfigure(encoding='utf-8')
+        sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
+        sys.stderr.reconfigure(encoding="utf-8", line_buffering=True)
     except Exception:
         pass
 
-# ── ANSI Colors ─────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# ANSI color codes
+# ---------------------------------------------------------------------------
 GREEN   = "\033[92m"
 BLUE    = "\033[94m"
 CYAN    = "\033[96m"
@@ -44,285 +58,374 @@ BOLD    = "\033[1m"
 DIM     = "\033[2m"
 RESET   = "\033[0m"
 
-LOCAL_PORT = 8088
+BRIDGE_PORT = 8088
 
-# ── 5 Devices from the Green Flow Devices Page ──────────────────────────────
-CONNECTED_DEVICES = [
+# ---------------------------------------------------------------------------
+# 5 Devices that appear on the Green Flow "Devices" page
+# ---------------------------------------------------------------------------
+DEVICES = [
     {
         "id":      "dev-001",
-        "name":    "بوابة المزرعة الرئيسية — ESP32 Industrial Gateway",
-        "type":    "بوابة رئيسية (Master Unit)",
+        "name":    "ESP32 Industrial Gateway  (Main Farm Hub)",
+        "type":    "Master Gateway Unit",
         "ip":      "192.168.1.150",
         "battery": "98%",
-        "status":  "ONLINE 🟢",
+        "signal":  "-65 dBm",
+        "status":  "ONLINE",
     },
     {
         "id":      "dev-002",
-        "name":    "مجس LoRa اللاسلكي — قطاع الزيتون الشرقي",
-        "type":    "مجس رطوبة وحرارة التربة (LoRa 915MHz)",
+        "name":    "LoRa Wireless Sensor  -  East Olive Zone",
+        "type":    "Soil Moisture & Temperature  (LoRa 915 MHz)",
         "ip":      "LoRa-Node-01A",
         "battery": "91%",
-        "status":  "ONLINE 🟢",
+        "signal":  "-74 dBm",
+        "status":  "ONLINE",
     },
     {
         "id":      "dev-003",
-        "name":    "مجس LoRa اللاسلكي — نخيل البرحي",
-        "type":    "مجس رطوبة وحرارة التربة (LoRa 915MHz)",
+        "name":    "LoRa Wireless Sensor  -  Barhi Palm Grove",
+        "type":    "Soil Moisture & Temperature  (LoRa 915 MHz)",
         "ip":      "LoRa-Node-02B",
         "battery": "86%",
-        "status":  "ONLINE 🟢",
+        "signal":  "-81 dBm",
+        "status":  "ONLINE",
     },
     {
         "id":      "dev-004",
-        "name":    "وحدة التحكم بريليهات المحابس — 8-Channel RS485",
-        "type":    "مجمع محابس الري الإلكترونية",
+        "name":    "Irrigation Relay Bank  -  8-Channel RS-485",
+        "type":    "Electronic Valve Controller",
         "ip":      "RS485-Bank-01",
         "battery": "100%",
-        "status":  "ONLINE 🟢",
+        "signal":  "Wired",
+        "status":  "ONLINE",
     },
     {
         "id":      "dev-005",
-        "name":    "مستشعر منسوب مياه البئر — Hydrostatic",
-        "type":    "حساس ضغط الأعماق (4-20mA)",
+        "name":    "Well Water Level Sensor  -  Hydrostatic",
+        "type":    "Depth Pressure Transducer  (4-20 mA)",
         "ip":      "Analog-Ch1",
         "battery": "95%",
-        "status":  "ONLINE 🟢",
+        "signal":  "Wired",
+        "status":  "ONLINE",
     },
 ]
 
-# ── Shared simulation state ──────────────────────────────────────────────────
-lock  = threading.Lock()
+# ---------------------------------------------------------------------------
+# Shared simulation state  (all access must hold `state_lock`)
+# ---------------------------------------------------------------------------
+state_lock = threading.Lock()
 state = {
-    "soilMoisture":     44.5,
-    "temperature":      28.5,
-    "humidity":         55.0,
-    "pumpStatus":       False,
-    "autoMode":         True,
-    "deviceStatus":     "online",
-    "_lastSliderValue": None,   # tracks last value sent from Flutter slider
+    "soilMoisture":  44.5,
+    "temperature":   28.5,
+    "humidity":      55.0,
+    "pumpStatus":    False,
+    "autoMode":      True,
+    "deviceStatus":  "online",
 }
 
-# ── Helper: progress bar ─────────────────────────────────────────────────────
-def _bar(pct: float, width: int = 30) -> str:
-    filled = int(pct / 100 * width)
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def _progress_bar(value: float, width: int = 32) -> str:
+    """Return a colored ASCII progress bar string."""
+    pct    = max(0.0, min(100.0, value))
+    filled = int(pct / 100.0 * width)
     color  = RED if pct < 30 else (GREEN if pct < 60 else BLUE)
     return f"{color}{'█' * filled}{'░' * (width - filled)}{RESET}"
 
-# ── Startup banner ───────────────────────────────────────────────────────────
-def print_banner_and_devices():
-    w = 88
-    bar_top    = "╔" + "═" * (w - 2) + "╗"
-    bar_mid    = "║" + " " * (w - 2) + "║"
-    bar_bot    = "╚" + "═" * (w - 2) + "╝"
-    div        = "─" * w
 
-    print(f"\n{GREEN}{BOLD}{bar_top}")
-    print(f"║{'🌿  GREEN FLOW — محاكي إنترنت الأشياء للزراعة الذكية':^{w-2}}║")
-    print(f"║{'ESP32 Smart Agriculture Simulator  •  Python Bridge v3.0':^{w-2}}║")
-    print(f"{bar_bot}{RESET}\n")
+def _moisture_label(pct: float) -> str:
+    if pct < 30:
+        return f"{RED}DRY  - Needs Irrigation!{RESET}"
+    if pct < 60:
+        return f"{GREEN}OPTIMAL{RESET}"
+    return f"{BLUE}WET  - Sufficient{RESET}"
 
-    print(f"{BOLD}{CYAN}{'الجهاز':<42} {'النوع':<35} {'البطارية':>8}  {'الحالة'}{RESET}")
-    print(div)
-    for d in CONNECTED_DEVICES:
-        name    = d['name'][:41]
-        devtype = d['type'][:34]
-        bat     = d['battery']
-        st      = d['status']
-        print(f"{CYAN}{name:<42}{RESET} {DIM}{devtype:<35}{RESET} {GREEN}{bat:>8}{RESET}  {st}")
-    print(div)
 
-    print(f"\n{GREEN}✅  {BOLD}5/5 أجهزة متصلة ومشتغلة{RESET}")
-    print(f"{BLUE}🌐  HTTP Bridge يستمع على: http://127.0.0.1:{LOCAL_PORT}{RESET}")
-    print(f"{YELLOW}📱  افتح التطبيق → المحاكي المدمج → حرّك مقياس الرطوبة{RESET}\n")
-    print(div)
-    print(f"  {DIM}threshold: رطوبة < 30% ← المضخة تشتغل | رطوبة >= 60% ← المضخة تقف{RESET}")
-    print(div + "\n")
+def _pump_label(on: bool) -> str:
+    return f"{BLUE}ON  💧{RESET}" if on else f"{YELLOW}OFF ⏸{RESET}"
 
-# ── HTTP Handler ─────────────────────────────────────────────────────────────
+
+# ---------------------------------------------------------------------------
+# Startup banner
+# ---------------------------------------------------------------------------
+def print_startup():
+    W = 90
+    sep = "─" * W
+
+    print(f"\n{GREEN}{BOLD}")
+    print("╔" + "═" * (W - 2) + "╗")
+    print("║" + "  🌿  GREEN FLOW  —  Smart Agriculture IoT Simulator  ".center(W - 2) + "║")
+    print("║" + "  ESP32 Virtual Hardware Bridge  •  Python v3.0  ".center(W - 2) + "║")
+    print("╚" + "═" * (W - 2) + f"╝{RESET}\n")
+
+    # Device table header
+    print(f"{BOLD}{CYAN}{'Device Name':<46} {'Type':<37} {'Battery':>7}  {'Status'}{RESET}")
+    print(sep)
+    for d in DEVICES:
+        name    = d["name"][:45]
+        dtype   = d["type"][:36]
+        bat     = d["battery"]
+        status  = f"{GREEN}● {d['status']}{RESET}"
+        print(f"{CYAN}{name:<46}{RESET} {DIM}{dtype:<37}{RESET} {GREEN}{bat:>7}{RESET}  {status}")
+    print(sep)
+
+    print(f"\n  {GREEN}{BOLD}✅  5 / 5 Devices  CONNECTED{RESET}")
+    print(f"  {BLUE}🌐  HTTP Bridge listening on: http://127.0.0.1:{BRIDGE_PORT}{RESET}")
+    print(f"  {YELLOW}📱  Open the app → Home Page → press 'Start Irrigation Now'{RESET}")
+    print(f"  {YELLOW}       or open the Built-in Simulator and move the slider.{RESET}")
+    print(f"\n  {DIM}Auto-Irrigation Thresholds:  < 30%  → Pump ON  |  ≥ 60%  → Pump OFF{RESET}")
+    print(sep + "\n")
+
+
+# ---------------------------------------------------------------------------
+# HTTP Request Handler
+# ---------------------------------------------------------------------------
 class BridgeHandler(BaseHTTPRequestHandler):
 
-    def _cors(self, code: int):
+    # ── CORS pre-flight ────────────────────────────────────────────────────
+    def _send_json(self, code: int, body: bytes):
         self.send_response(code)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin",  "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Content-Type",                         "application/json")
+        self.send_header("Access-Control-Allow-Origin",          "*")
+        self.send_header("Access-Control-Allow-Methods",         "GET, POST, PUT, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers",         "Content-Type, Authorization, X-Requested-With, Accept")
+        self.send_header("Access-Control-Allow-Private-Network", "true")
         self.end_headers()
+        self.wfile.write(body)
 
     def do_OPTIONS(self):
-        self._cors(204)
+        self._send_json(200, b"")
 
+    # ── GET /telemetry  &  GET /health ────────────────────────────────────
     def do_GET(self):
         if self.path == "/telemetry":
-            with lock:
+            with state_lock:
                 snap = dict(state)
-            snap.pop("_lastSliderValue", None)
-            self._cors(200)
-            self.wfile.write(json.dumps(snap).encode())
-        elif self.path == "/health":
-            self._cors(200)
-            self.wfile.write(b'{"status":"ok","devices":5}')
-        else:
-            self._cors(404)
-            self.wfile.write(b'{"error":"not found"}')
+            self._send_json(200, json.dumps(snap).encode())
 
+        elif self.path == "/health":
+            self._send_json(200, b'{"status":"ok","devices":5}')
+
+        else:
+            self._send_json(404, b'{"error":"not found"}')
+
+    # ── POST /control ──────────────────────────────────────────────────────
     def do_POST(self):
         if self.path != "/control":
-            self._cors(404)
-            self.wfile.write(b'{"error":"not found"}')
+            self._send_json(404, b'{"error":"not found"}')
             return
 
         length = int(self.headers.get("Content-Length", 0))
-        body   = self.rfile.read(length)
+        raw    = self.rfile.read(length)
         now    = time.strftime("%H:%M:%S")
 
         try:
-            cmd = json.loads(body)
+            cmd = json.loads(raw)
         except Exception:
-            self._cors(400)
-            self.wfile.write(b'{"error":"bad json"}')
+            self._send_json(400, b'{"error":"invalid JSON"}')
             return
 
-        with lock:
-            # 1. Soil moisture from Flutter slider
+        with state_lock:
+            changed = False
+
+            # ── 1. Soil moisture update (from Flutter slider) ───────────
             if "soilMoisture" in cmd:
-                new_soil = float(cmd["soilMoisture"])
-                old_soil = state["soilMoisture"]
-                state["soilMoisture"]     = round(new_soil, 1)
-                state["_lastSliderValue"] = round(new_soil, 1)
+                new_soil = round(float(cmd["soilMoisture"]), 1)
+                state["soilMoisture"] = new_soil
+                bar = _progress_bar(new_soil)
+                label = _moisture_label(new_soil)
+                print(
+                    f"\r  📡 [App → Bridge {now}]  Soil Moisture: "
+                    f"[{bar}] {new_soil:5.1f}%  {label}",
+                    end="", flush=True,
+                )
+                changed = True
 
-                # Decide color
-                c = RED if new_soil < 30 else (GREEN if new_soil < 60 else BLUE)
-                bar = _bar(new_soil)
-                label = "جافة ⚠️" if new_soil < 30 else ("مثالية ✅" if new_soil < 60 else "رطبة كافية 💧")
-                print(f"\r  {c}📡 [من التطبيق {now}] رطوبة التربة: [{bar}] {new_soil:5.1f}%  {label}{RESET}",
-                      end="", flush=True)
+                # Immediate threshold check:
+                # Triggers in both Auto and Manual modes (Emergency Drought Protection)
+                if new_soil < 30.0 and not state["pumpStatus"]:
+                    state["pumpStatus"] = True
+                    mode_tag = "AUTO-ON" if state["autoMode"] else "EMERGENCY DROUGHT PROTECTION (MANUAL MODE)"
+                    print(
+                        f"\n\n  {RED}{BOLD}[{now}] {mode_tag}  💧  "
+                        f"Soil {new_soil:.1f}% < 30%  →  Pump STARTED automatically!{RESET}"
+                    )
+                    print(
+                        f"  {BLUE}  ► Moisture will rise gradually until 60% ...{RESET}\n"
+                    )
+                elif new_soil >= 60.0 and state["pumpStatus"]:
+                    state["pumpStatus"] = False
+                    state["soilMoisture"] = 60.0
+                    print(
+                        f"\n\n  {GREEN}{BOLD}[{now}] TARGET REACHED (60.0%) ⏸  "
+                        f"Soil {new_soil:.1f}% ≥ 60%  →  Pump STOPPED{RESET}\n"
+                    )
 
-                # Auto threshold logic (immediate response)
-                auto = state["autoMode"]
-                if auto:
-                    pump = state["pumpStatus"]
-                    if new_soil < 30.0 and not pump:
-                        state["pumpStatus"] = True
-                        print(f"\n\n{RED}{BOLD}  💦 [{now}] تشغيل تلقائي للمضخة! رطوبة {new_soil:.1f}% < 30%{RESET}")
-                        print(f"  {BLUE}  ► الرطوبة ستبدأ في الارتفاع تدريجياً حتى 60%...{RESET}\n")
-                    elif new_soil >= 60.0 and pump:
-                        state["pumpStatus"] = False
-                        print(f"\n\n{GREEN}{BOLD}  ⏸️  [{now}] إيقاف تلقائي للمضخة! رطوبة {new_soil:.1f}% >= 60%{RESET}\n")
-
-            # 2. Pump command from Flutter (manual)
+            # ── 2. Pump command (from "Start / Stop Irrigation" button) ──
             if "pumpCommand" in cmd or "pumpStatus" in cmd:
-                raw = cmd.get("pumpCommand") or ("ON" if cmd.get("pumpStatus") else "OFF")
-                if isinstance(raw, bool):
-                    new_pump = raw
+                raw_cmd = cmd.get("pumpCommand") or ("ON" if cmd.get("pumpStatus") else "OFF")
+                if isinstance(raw_cmd, bool):
+                    new_pump = raw_cmd
                 else:
-                    new_pump = str(raw).upper() == "ON"
+                    new_pump = str(raw_cmd).strip().upper() == "ON"
+                old_pump = state["pumpStatus"]
                 state["pumpStatus"] = new_pump
-                label = f"{BLUE}تعمل 💦{RESET}" if new_pump else f"{YELLOW}متوقفة ⏸️{RESET}"
-                print(f"\n  🔧 [{now}] أمر مضخة من التطبيق: {label}")
+                if new_pump != old_pump:
+                    action = "STARTED" if new_pump else "STOPPED"
+                    color  = BLUE if new_pump else YELLOW
+                    src    = "Home Page Button" if "pumpCommand" in cmd else "App Command"
+                    print(
+                        f"\n  🔧 [{now}] Pump {action} via {src}  →  "
+                        f"{color}Pump: {_pump_label(new_pump)}{RESET}"
+                    )
+                    if new_pump:
+                        print(
+                            f"  {BLUE}  ► Moisture will rise gradually until 60% ...{RESET}\n"
+                        )
+                changed = True
 
-            # 3. Auto-mode toggle
+            # ── 3. Auto-mode toggle ────────────────────────────────────
             if "autoMode" in cmd:
                 new_auto = bool(cmd["autoMode"])
                 state["autoMode"] = new_auto
-                mode_label = f"{GREEN}تلقائي (Automatic){RESET}" if new_auto else f"{YELLOW}يدوي (Manual){RESET}"
-                print(f"\n  🔄 [{now}] تغيير الوضع إلى: {mode_label}")
+                label = f"{GREEN}AUTOMATIC{RESET}" if new_auto else f"{YELLOW}MANUAL{RESET}"
+                print(f"\n  🔄 [{now}] Mode switched to: {label}")
+                changed = True
 
-            # 4. Temperature / humidity (silent update)
+            # ── 4. Temperature / Humidity (silent update) ──────────────
             if "temperature" in cmd:
-                state["temperature"] = float(cmd["temperature"])
+                state["temperature"] = round(float(cmd["temperature"]), 1)
             if "humidity" in cmd:
-                state["humidity"] = float(cmd["humidity"])
+                state["humidity"] = round(float(cmd["humidity"]), 1)
 
-        self._cors(200)
-        self.wfile.write(b'{"status":"ok"}')
+        self._send_json(200, b'{"status":"ok"}')
 
     def log_message(self, fmt, *args):
         pass   # silence HTTP access log
 
-# ── HTTP server thread ───────────────────────────────────────────────────────
-def run_server():
+
+# ---------------------------------------------------------------------------
+# HTTP server thread
+# ---------------------------------------------------------------------------
+def _run_server():
     try:
-        srv = HTTPServer(("127.0.0.1", LOCAL_PORT), BridgeHandler)
+        # Bind to 0.0.0.0 so both 127.0.0.1 and localhost connect cleanly
+        srv = HTTPServer(("0.0.0.0", BRIDGE_PORT), BridgeHandler)
+        print(f"  {GREEN}[Bridge] HTTP server started on port {BRIDGE_PORT}{RESET}\n", flush=True)
         srv.serve_forever()
-    except OSError as e:
-        print(f"\n{RED}[Bridge Error] Port {LOCAL_PORT} busy or denied: {e}{RESET}")
-        print(f"{YELLOW}  → Close any other process using port {LOCAL_PORT} and retry.{RESET}\n")
+    except OSError as exc:
+        print(
+            f"\n{RED}[Bridge ERROR]  Port {BRIDGE_PORT} is already in use: {exc}{RESET}",
+            flush=True,
+        )
+        print(
+            f"{YELLOW}  → Close the other process using port {BRIDGE_PORT} and try again.{RESET}\n",
+            flush=True,
+        )
 
-# ── Main simulation loop ─────────────────────────────────────────────────────
+
+# ---------------------------------------------------------------------------
+# Main simulation loop
+# ---------------------------------------------------------------------------
 def main():
-    print_banner_and_devices()
+    print_startup()
 
-    t = threading.Thread(target=run_server, daemon=True)
+    # Start HTTP bridge in background thread
+    t = threading.Thread(target=_run_server, daemon=True)
     t.start()
+    time.sleep(0.3)   # let server bind before first status print
 
-    tick      = 0
-    RISE_MIN  = 3.5     # % per cycle when pump is ON
-    RISE_MAX  = 5.5
-    DRY_RATE  = 0.15    # % per cycle when pump is OFF
-    CYCLE_SEC = 1.5
-
-    # Print first status line immediately
-    with lock:
+    # Initial status line
+    with state_lock:
         soil = state["soilMoisture"]
-    c   = RED if soil < 30 else (GREEN if soil < 60 else BLUE)
-    bar = _bar(soil)
-    print(f"[{time.strftime('%H:%M:%S')}] حالة الأجهزة: 5/5 متصلة 🟢 | رطوبة التربة: {c}{soil:5.1f}% [{bar}]{RESET} | المضخة: متوقفة ⏸️\n")
+        pump = state["pumpStatus"]
+    bar = _progress_bar(soil)
+    print(
+        f"[{time.strftime('%H:%M:%S')}]  Devices: 5/5 ●  |  "
+        f"Soil Moisture: {soil:5.1f}% [{bar}]  |  Pump: {_pump_label(pump)}\n"
+    )
+
+    CYCLE_S  = 1.5    # seconds per simulation tick
+    RISE_MIN = 3.5    # % moisture gained per cycle when pump is ON
+    RISE_MAX = 5.5
+    DRY_RATE = 0.15   # % moisture lost per cycle when pump is OFF
+    tick     = 0
 
     while True:
-        time.sleep(CYCLE_SEC)
-        now = time.strftime("%H:%M:%S")
+        time.sleep(CYCLE_S)
         tick += 1
+        now = time.strftime("%H:%M:%S")
 
-        with lock:
+        with state_lock:
             pump = state["pumpStatus"]
             soil = state["soilMoisture"]
             auto = state["autoMode"]
 
             if pump:
-                # Moisture rises
+                # ── Pump is ON → moisture rises ───────────────────────
                 rise = round(random.uniform(RISE_MIN, RISE_MAX), 1)
                 soil = min(round(soil + rise, 1), 85.0)
                 state["soilMoisture"] = soil
-                bar = _bar(soil)
-                print(f"  {BLUE}💦 [المضخة تعمل {now}] رطوبة التربة ترتفع: [{bar}] {soil:5.1f}%{RESET}", flush=True)
+                bar   = _progress_bar(soil)
+                label = _moisture_label(soil)
+                print(
+                    f"  💧 [Pump ON  {now}]  Soil Moisture rising: "
+                    f"[{bar}] {soil:5.1f}%  {label}",
+                    flush=True,
+                )
 
-                # Auto-stop at 60%
-                if auto and soil >= 60.0:
+                # Target reached: stop pump automatically at 60%
+                if soil >= 60.0:
                     state["pumpStatus"] = False
-                    w = 72
-                    print(f"\n{GREEN}{BOLD}╔{'═' * (w-2)}╗")
-                    print(f"║{'✅  تم الوصول للنسبة المطلوبة!':^{w-2}}║")
-                    print(f"║{'':^{w-2}}║")
-                    print(f"║{f'   رطوبة التربة وصلت إلى {soil:.1f}%  >=  60.0%':^{w-2}}║")
-                    print(f"║{'   → تم إيقاف المضخة تلقائياً ⏸️':^{w-2}}║")
-                    print(f"╚{'═' * (w-2)}╝{RESET}\n")
+                    state["soilMoisture"] = 60.0
+                    soil = 60.0
+                    W = 72
+                    print(f"\n{GREEN}{BOLD}╔{'═' * (W - 2)}╗", flush=True)
+                    print(f"║{'':^{W-2}}║", flush=True)
+                    print(f"║{'  ✅  TARGET REACHED! (60.0%)  ':^{W-2}}║", flush=True)
+                    print(f"║{'':^{W-2}}║", flush=True)
+                    print(f"║{f'  Soil Moisture: {soil:.1f}%  ≥  60.0%  →  Pump STOPPED automatically':^{W-2}}║", flush=True)
+                    print(f"║{'':^{W-2}}║", flush=True)
+                    print(f"╚{'═' * (W - 2)}╝{RESET}\n", flush=True)
 
             else:
-                # Drying slowly
+                # ── Pump is OFF → soil dries slowly ───────────────────
                 soil = max(round(soil - DRY_RATE, 1), 10.0)
                 state["soilMoisture"] = soil
 
-                # Auto-start if drops below 30%
-                if auto and soil < 30.0:
+                # Auto-start if soil falls below threshold (both Auto and Manual drought protection)
+                if soil < 30.0:
                     state["pumpStatus"] = True
-                    print(f"\n  {RED}{BOLD}💦 [{now}] رطوبة التربة انخفضت إلى {soil:.1f}% < 30% → تشغيل تلقائي للمضخة!{RESET}")
-                    print(f"  {BLUE}  ► الرطوبة ستبدأ في الارتفاع تدريجياً حتى 60%...{RESET}\n")
+                    mode_tag = "AUTO-ON" if auto else "EMERGENCY DROUGHT PROTECTION (MANUAL MODE)"
+                    print(
+                        f"\n  {RED}{BOLD}[{now}] {mode_tag}  💧  "
+                        f"Soil {soil:.1f}% < 30%  →  Pump STARTED automatically{RESET}"
+                    )
+                    print(
+                        f"  {BLUE}  ► Moisture will rise gradually until 60% ...{RESET}\n"
+                    )
 
             cur_soil = state["soilMoisture"]
             cur_pump = state["pumpStatus"]
 
-        # Print status every ~12 seconds (every 8 cycles) only when pump is off
+        # Print periodic status line every ~12 s (8 cycles) when pump is OFF
         if tick % 8 == 0 and not cur_pump:
-            c   = RED if cur_soil < 30 else (GREEN if cur_soil < 60 else BLUE)
-            bar = _bar(cur_soil)
-            pump_label = "تعمل 💦" if cur_pump else "متوقفة ⏸️"
-            print(f"[{now}] الأجهزة: 5/5 🟢 | رطوبة التربة: {c}{cur_soil:5.1f}% [{bar}]{RESET} | المضخة: {pump_label}")
+            bar   = _progress_bar(cur_soil)
+            label = _moisture_label(cur_soil)
+            mode  = "AUTO" if auto else "MANUAL"
+            print(
+                f"[{now}]  Devices: 5/5 ●  |  "
+                f"Soil: {cur_soil:5.1f}% [{bar}]  {label}  |  "
+                f"Pump: {_pump_label(cur_pump)}  |  Mode: {mode}"
+            )
 
 
+# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print(f"\n{YELLOW}[Exit] تم إيقاف المحاكي. مع السلامة! 👋{RESET}\n")
+        print(f"\n{YELLOW}[Exit]  Simulator stopped.  Goodbye! 👋{RESET}\n")
         sys.exit(0)

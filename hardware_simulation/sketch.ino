@@ -271,7 +271,12 @@ void loop() {
       setRelay(false, "Automatic Mode: Soil Moisture >= 60.0%");
     }
   } else {
-    // MANUAL MODE: Governed strictly by Firebase commands (handled in sync routine)
+    // MANUAL MODE: Emergency drought protection override (<30% ON, >=60% OFF)
+    if (soilMoisture < THRESHOLD_LOW && !relayState) {
+      setRelay(true, "Manual Mode Emergency: Soil Moisture < 30.0% (Drought Protection)");
+    } else if (soilMoisture >= THRESHOLD_HIGH && relayState) {
+      setRelay(false, "Manual Mode Target Reached: Soil Moisture >= 60.0%");
+    }
   }
 
   // 4. Periodic HTTPS REST Telemetry & Command Fetching (every 3 seconds)
