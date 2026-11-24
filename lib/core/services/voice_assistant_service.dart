@@ -129,4 +129,43 @@ class VoiceAssistantService extends ChangeNotifier {
       notifyListeners();
     });
   }
+
+  /// Explains the current active screen in natural Arabic.
+  void explainCurrentScreen(BuildContext context, String screenKey) {
+    String textAr;
+    String textEn;
+
+    switch (screenKey) {
+      case 'home':
+        textAr = 'أهلاً بك يا حاج أحمد في لوحة التحكم الرئيسية لمزرعة الدلتا. رطوبة التربة ممتازة عند 42%، وجميع الحساسات الأربعة تعمل بكفاءة، والمضخة في وضع التوقف التلقائي لتوفير المياه.';
+        textEn = 'Welcome Farmer Ahmed. Soil moisture is optimal at 42%, all 4 sensors are online, and irrigation pump is in smart auto-standby.';
+        break;
+      case 'irrigation':
+        textAr = 'شاشة التحكم في الري الذكي. يمكنك تشغيل وإيقاف مضخات الري يدويًا، أو ترك النظام يعمل تلقائيًا وفق جداول المناطق المحددة.';
+        textEn = 'Smart Irrigation Control. Start/stop pumps manually or let the automated schedule manage your zones.';
+        break;
+      case 'devices':
+        textAr = 'شاشة أجهزة إنترنت الأشياء والحساسات. تعرض حالة وحدة التحكم الرئيسية ESP32 وحساسات الرطوبة ونسبة الإشارة والبطارية.';
+        textEn = 'IoT Devices & Sensors. Monitors ESP32 controller, soil probes, signal strength, and battery health.';
+        break;
+      case 'analytics':
+        textAr = 'شاشة التقارير والتحليلات. توضح كميات استهلاك المياه اليومية والأسبوعية ونسبة التوفير المحققة مقارنة بالري التقليدي.';
+        textEn = 'Water Analytics & Reports. Displays daily/weekly water usage and water savings percentage.';
+        break;
+      case 'farms':
+        textAr = 'شاشة إدارة مزارعك. يمكنك استعراض مزارعك المسجلة ومساحة كل حقل وعدد الحساسات ومناطق الري التابعة له.';
+        textEn = 'My Farms Management. View registered farms, acreage, sensors, and assigned irrigation zones.';
+        break;
+      case 'quotations':
+        textAr = 'شاشة عروض الأسعار والفواتير. تتيح لك متابعة تكاليف الصيانة وتركيب شبكات الري الذكية والمدفوعات.';
+        textEn = 'Quotations & Invoices. Review costs, pending equipment quotes, and completed maintenance invoices.';
+        break;
+      default:
+        textAr = 'شاشة جرين فلو للزراعة الذكية. اضغط على أي عنصر أو أيقونة لمعرفة وظيفتها وبياناتها.';
+        textEn = 'Green Flow Smart Agriculture screen. Tap any component for details.';
+        break;
+    }
+
+    speak(context, arabicText: textAr, englishText: textEn);
+  }
 }

@@ -1,5 +1,5 @@
 /// Role-based access control and security matrix for Green Flow.
-/// Supports exclusively the two primary platform roles: Super Admin and Farmer.
+/// Enforces strict data isolation across Super Admin, Farm Owner, Technician, Worker, and Finance Manager.
 library;
 
 import 'user_account.dart';
@@ -17,16 +17,28 @@ class PermissionService {
   static bool canApproveFarmers(UserRole role) => role == UserRole.superAdmin;
 
   /// Whether user can access Finance & Pricing features.
-  static bool canAccessFinance(UserRole role) => role == UserRole.superAdmin;
+  static bool canAccessFinance(UserRole role) =>
+      role == UserRole.superAdmin || role == UserRole.financeManager;
 
   /// Whether user can manage products, hardware catalog and service prices.
-  static bool canManagePricing(UserRole role) => role == UserRole.superAdmin;
+  static bool canManagePricing(UserRole role) =>
+      role == UserRole.superAdmin || role == UserRole.financeManager;
 
   /// Whether user can prepare, approve, and send quotations.
-  static bool canManageQuotations(UserRole role) => role == UserRole.superAdmin;
+  static bool canManageQuotations(UserRole role) =>
+      role == UserRole.superAdmin || role == UserRole.financeManager;
 
   /// Whether user can manage invoices and process simulated payments.
-  static bool canManageInvoices(UserRole role) => role == UserRole.superAdmin;
+  static bool canManageInvoices(UserRole role) =>
+      role == UserRole.superAdmin || role == UserRole.financeManager;
+
+  /// Whether user has technician dispatch and inspection access.
+  static bool canAccessTechnician(UserRole role) =>
+      role == UserRole.superAdmin || role == UserRole.technician;
+
+  /// Whether user has agricultural worker daily checklist access.
+  static bool canAccessWorker(UserRole role) =>
+      role == UserRole.superAdmin || role == UserRole.farmWorker;
 
   /// Whether user can view and manage farms.
   static bool canManageFarms(UserRole role) =>
@@ -42,13 +54,24 @@ class PermissionService {
       if (ownerUserId != null && ownerUserId == user.id) return true;
       return user.assignedFarmId == farmId || user.assignedFarmIds.contains(farmId);
     }
+    if (user.role == UserRole.technician) {
+      return user.assignedFarmIds.contains(farmId) || user.assignedFarmId == farmId;
+    }
+    if (user.role == UserRole.farmWorker) {
+      return user.assignedFarmId == farmId;
+    }
+    if (user.role == UserRole.financeManager) {
+      return true; // Read-only for billing context
+    }
     return false;
   }
 
   /// Whether user can execute irrigation pump/solenoid actuators.
   static bool canControlIrrigation(UserAccount? user, String farmId, {String? ownerUserId}) {
     if (user == null || !canAccessFarm(user, farmId, ownerUserId: ownerUserId)) return false;
-    return user.role == UserRole.superAdmin || user.role == UserRole.farmOwner;
+    return user.role == UserRole.superAdmin ||
+        user.role == UserRole.farmOwner ||
+        user.role == UserRole.farmWorker;
   }
 
   /// Whether user can access a specific inspection request.
@@ -58,13 +81,17 @@ class PermissionService {
     if (user.role == UserRole.farmOwner) {
       return customerUserId == user.id || (farmId != null && canAccessFarm(user, farmId));
     }
+    if (user.role == UserRole.technician) {
+      return (assignedTechnicianId != null && assignedTechnicianId == user.id) ||
+          (farmId != null && (user.assignedFarmIds.contains(farmId) || user.assignedFarmId == farmId));
+    }
     return false;
   }
 
   /// Whether user can view financial details (quotations / invoices).
   static bool canAccessFinancialRecord(UserAccount? user, {required String recordFarmerId}) {
     if (user == null) return false;
-    if (user.role == UserRole.superAdmin) return true;
+    if (user.role == UserRole.superAdmin || user.role == UserRole.financeManager) return true;
     if (user.role == UserRole.farmOwner) return user.id == recordFarmerId;
     return false;
   }
@@ -76,7 +103,8 @@ class PermissionService {
   }
 
   /// Whether user has access to IoT diagnostic controls.
-  static bool canManageHardware(UserRole role) => role == UserRole.superAdmin;
+  static bool canManageHardware(UserRole role) =>
+      role == UserRole.superAdmin || role == UserRole.technician;
 
   /// Verify that a non-admin cannot elevate their own role or modify other users.
   static bool canModifyUser(UserAccount? actor, String targetUserId) {

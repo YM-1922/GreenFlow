@@ -1,0 +1,13 @@
+CompileFlags:
+  Add:
+    - -x
+    - c++
+    - -std=c++17
+    - -w
+    - -DARDUINO=10819
+    - -DESP32
+Diagnostics:
+  Suppress:
+    - fe_expected_compiler_job
+    - pp_file_not_found
+    - "*"

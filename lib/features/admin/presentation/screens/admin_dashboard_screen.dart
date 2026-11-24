@@ -3,6 +3,7 @@ import '../../../../app/routes/app_routes.dart';
 import '../../../../core/auth/auth.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../devices/presentation/widgets/simulation_qr_dialog.dart';
 import '../../../finance/data/datasources/finance_mock_data_source.dart';
 
 /// Complete Super Admin Operations Portal & Unified Management System.
@@ -1359,21 +1360,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         const SizedBox(height: 12),
         _buildPlanCard(
           title: isAr ? 'الباقة الأساسية' : 'Basic Plan',
-          details: isAr ? '10 أشجار - 500 ج.م / شهر' : '10 Trees - 500 EGP / Month',
+          details: isAr ? 'مزرعة واحدة - 4 حساسات - 500 ج.م / شهر' : '1 Farm - 4 Sensors - 500 EGP / Mo',
           icon: Icons.eco_rounded,
           isDark: isDark,
         ),
         const SizedBox(height: 10),
         _buildPlanCard(
           title: isAr ? 'باقة النمو' : 'Growth Plan',
-          details: isAr ? '50 شجرة - 750 ج.م / شهر' : '50 Trees - 750 EGP / Month',
+          details: isAr ? '3 مزارع - 12 حساس - 750 ج.م / شهر' : '3 Farms - 12 Sensors - 750 EGP / Mo',
           icon: Icons.spa_rounded,
           isDark: isDark,
         ),
         const SizedBox(height: 10),
         _buildPlanCard(
           title: isAr ? 'الباقة الاحترافية' : 'Pro Plan',
-          details: isAr ? '100 شجرة - 1,000 ج.م / شهر' : '100 Trees - 1,000 EGP / Month',
+          details: isAr ? 'مزارع غير محدودة - تحكم كامل - 1,000 ج.م / شهر' : 'Unlimited Farms - Full Control - 1,000 EGP / Mo',
           icon: Icons.workspace_premium_rounded,
           isDark: isDark,
         ),
@@ -1725,6 +1726,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       {'title': isAr ? 'نسخ احتياطي للبيانات' : 'Data Backup & Restore', 'icon': Icons.cloud_download_outlined},
       {'title': isAr ? 'سجلات النظام' : 'System Logs & Audit Trail', 'icon': Icons.description_outlined},
       {'title': isAr ? 'حول النظام' : 'About Green Flow Platform', 'icon': Icons.info_outline_rounded},
+      {'title': isAr ? 'محاكاة ESP32 ورمز QR' : 'ESP32 IoT Simulation & QR Hub', 'icon': Icons.qr_code_2_rounded},
+      {'title': isAr ? 'تسجيل الخروج' : 'Sign Out / Logout', 'icon': Icons.logout_rounded, 'isDestructive': true},
     ];
 
     return ListView.separated(
@@ -1733,10 +1736,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final item = settingsItems[index];
+        final isDestructive = item['isDestructive'] == true;
         return InkWell(
           onTap: () {
             if (index == 7) {
               _showAboutDialog(isAr);
+            } else if (index == 8) {
+              SimulationQrDialog.show(context);
+            } else if (index == 9) {
+              _confirmLogout(isAr);
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('${item['title']} - ${isAr ? 'الإعدادات جاهزة' : 'Settings configured'}')),
@@ -1749,24 +1757,81 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E293B) : Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              border: Border.all(
+                color: isDestructive
+                    ? const Color(0xFFEF4444).withValues(alpha: 0.3)
+                    : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              ),
             ),
             child: Row(
               children: [
-                Icon(item['icon'] as IconData, size: 20, color: AppColors.primaryGreen),
+                Icon(
+                  item['icon'] as IconData,
+                  size: 20,
+                  color: isDestructive ? const Color(0xFFEF4444) : AppColors.primaryGreen,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     item['title'] as String,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDestructive ? const Color(0xFFEF4444) : null,
+                    ),
                   ),
                 ),
-                const Icon(Icons.chevron_left_rounded, color: Colors.grey, size: 20),
+                Icon(
+                  Icons.chevron_left_rounded,
+                  color: isDestructive ? const Color(0xFFEF4444) : Colors.grey,
+                  size: 20,
+                ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  void _confirmLogout(bool isAr) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.logout_rounded, color: Color(0xFFDC2626)),
+            const SizedBox(width: 8),
+            Text(isAr ? 'تسجيل الخروج' : 'Log Out'),
+          ],
+        ),
+        content: Text(
+          isAr
+              ? 'هل أنت متأكد من رغبتك في تسجيل الخروج من لوحة تحكم المسؤول؟ تم حفظ جميع البيانات والإعدادات بشكل دائم.'
+              : 'Are you sure you want to sign out from the Admin Portal? All changes have been permanently saved.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(isAr ? 'إلغاء' : 'Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _authService.logout();
+              Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+                AppRoutes.login,
+                (_) => false,
+              );
+            },
+            child: Text(isAr ? 'تأكيد الخروج' : 'Confirm Logout'),
+          ),
+        ],
+      ),
     );
   }
 

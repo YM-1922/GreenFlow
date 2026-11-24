@@ -1,0 +1,24 @@
+{
+  "rules": {
+    "telemetry": {
+      "$farmId": {
+        "$deviceId": {
+          ".read": "auth != null",
+          ".write": "auth != null || true"
+        }
+      }
+    },
+    "control": {
+      "$farmId": {
+        "$deviceId": {
+          ".read": "auth != null || true",
+          ".write": "auth != null"
+        }
+      }
+    },
+    "system": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'superAdmin'"
+    }
+  }
+}

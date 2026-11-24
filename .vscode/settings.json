@@ -1,0 +1,13 @@
+{
+  "files.associations": {
+    "*.ino": "cpp"
+  },
+  "clangd.fallbackFlags": [
+    "-x",
+    "c++",
+    "-std=c++17",
+    "-w",
+    "-DARDUINO=10819",
+    "-DESP32"
+  ]
+}

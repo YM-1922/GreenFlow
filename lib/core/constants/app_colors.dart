@@ -6,20 +6,20 @@ class AppColors {
   AppColors._();
 
   // Primary Agriculture Greens
-  static const Color primaryGreen = Color(0xFF16A34A); // Reference Primary Green #16A34A
-  static const Color primaryGreenDark = Color(0xFF166534); // Reference Dark Green #166534
-  static const Color primaryGreenLight = Color(0xFF22C55E); // Fresh Mint Green
-  static const Color softSage = Color(0xFFE8F0E7); // Reference Soft Sage #E8F0E7
-  static const Color primaryGreenSurface = Color(0xFFE8F0E7); // Ultra-light green tint / Soft Sage
+  static const Color primaryGreen = Color(0xFF10B981); // Primary Green #10B981
+  static const Color primaryGreenDark = Color(0xFF047857); // Dark Green #047857
+  static const Color primaryGreenLight = Color(0xFF34D399); // Fresh Mint Green
+  static const Color softSage = Color(0xFFE8F5E9); // Soft Sage Background Tint
+  static const Color primaryGreenSurface = Color(0xFFECFDF5); // Ultra-light green tint
 
   // Secondary Irrigation & Water Flow Blues
-  static const Color flowBlue = Color(0xFF0284C7); // Clean Water Blue
+  static const Color flowBlue = Color(0xFF0284C7); // Clean Water Blue #0284C7
   static const Color flowBlueDark = Color(0xFF0369A1); // Deep Ocean Blue
   static const Color flowBlueLight = Color(0xFF38BDF8); // Sky Flow Aqua
   static const Color flowBlueSurface = Color(0xFFF0F9FF); // Ultra-light water tint
 
   // IoT & Sensor State Colors
-  static const Color sensorOnline = Color(0xFF16A34A); // Active / Optimal
+  static const Color sensorOnline = Color(0xFF10B981); // Active / Optimal
   static const Color sensorConnecting = Color(0xFF0EA5E9); // Syncing
   static const Color sensorWarning = Color(0xFFF59E0B); // Low Moisture / Attention
   static const Color sensorAlert = Color(0xFFEF4444); // Critical / High Temp
@@ -27,7 +27,7 @@ class AppColors {
 
   // Neutral Colors (Light Theme)
   static const Color pureWhite = Color(0xFFFFFFFF);
-  static const Color backgroundLight = Color(0xFFFAFCF9); // Reference Background #FAFCF9
+  static const Color backgroundLight = Color(0xFFF8FAFC); // Reference Background #F8FAFC
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color cardLight = Color(0xFFFFFFFF);
   static const Color borderLight = Color(0xFFE5E7EB);

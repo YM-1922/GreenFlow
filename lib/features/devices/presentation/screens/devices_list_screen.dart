@@ -6,6 +6,7 @@ import '../../data/datasources/devices_mock_data_source.dart';
 import '../../domain/entities/device_entities.dart';
 import '../widgets/device_card.dart';
 import '../widgets/hardware_safety_card.dart';
+import '../widgets/simulation_qr_dialog.dart';
 
 /// Screen displaying the registered ESP32 controllers, LoRa soil probes, and actuators.
 class DevicesListScreen extends StatefulWidget {
@@ -77,6 +78,11 @@ class _DevicesListScreenState extends State<DevicesListScreen> {
           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
         ),
         actions: [
+          IconButton(
+            tooltip: isArabic ? 'محاكاة ESP32 ورمز QR' : 'ESP32 Simulation & QR',
+            icon: const Icon(Icons.qr_code_2_rounded),
+            onPressed: () => SimulationQrDialog.show(context),
+          ),
           IconButton(
             tooltip: isArabic ? 'تحديث' : 'Refresh',
             icon: const Icon(Icons.refresh_rounded),

@@ -14,11 +14,7 @@ class FarmDetailsScreen extends StatefulWidget {
   final String farmId;
   final FarmsMockDataSource? dataSource;
 
-  const FarmDetailsScreen({
-    super.key,
-    required this.farmId,
-    this.dataSource,
-  });
+  const FarmDetailsScreen({super.key, required this.farmId, this.dataSource});
 
   @override
   State<FarmDetailsScreen> createState() => _FarmDetailsScreenState();
@@ -92,9 +88,11 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: AppColors.primaryGreenDark,
-            content: Text(AppStrings.isArabic(context)
-                ? 'تمت إضافة منطقة الري بنجاح'
-                : 'Irrigation zone added successfully'),
+            content: Text(
+              AppStrings.isArabic(context)
+                  ? 'تمت إضافة منطقة الري بنجاح'
+                  : 'Irrigation zone added successfully',
+            ),
           ),
         );
       },
@@ -157,15 +155,17 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
     }
 
     final farm = _farm!;
-    final areaUnitLabel =
-        isArabic ? farm.areaUnit.labelAr() : farm.areaUnit.labelEn();
+    final areaUnitLabel = isArabic
+        ? farm.areaUnit.labelAr()
+        : farm.areaUnit.labelEn();
 
     // Check if there is an inspection request for this farm
     final linkedRequest = _dataSource.getInspectionRequestForFarm(farm.id);
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor: isDark
+          ? AppColors.backgroundDark
+          : AppColors.backgroundLight,
       appBar: AppBar(
         title: Text(
           farm.name,
@@ -179,8 +179,10 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
           ),
           IconButton(
             tooltip: AppStrings.deleteFarm(context),
-            icon: const Icon(Icons.delete_outline_rounded,
-                color: AppColors.sensorAlert),
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              color: AppColors.sensorAlert,
+            ),
             onPressed: _onDeleteFarm,
           ),
         ],
@@ -198,12 +200,15 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                   color: isDark ? AppColors.cardDark : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    color: isDark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color:
-                          Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                      color: Colors.black.withValues(
+                        alpha: isDark ? 0.2 : 0.04,
+                      ),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -286,9 +291,9 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: _DetailStatBox(
-                            label: AppStrings.treesCount(context),
-                            value: '${farm.treesCount}',
-                            icon: Icons.park_rounded,
+                            label: AppStrings.connectedDevices(context),
+                            value: '${farm.devices}',
+                            icon: Icons.memory_rounded,
                             color: AppColors.primaryGreen,
                             isDark: isDark,
                           ),
@@ -325,18 +330,26 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                       runSpacing: 6,
                       children: farm.crops.map((c) {
                         return Chip(
-                          label: Text(c,
-                              style: const TextStyle(
-                                  fontSize: 11, fontWeight: FontWeight.w600)),
+                          label: Text(
+                            c,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           backgroundColor: isDark
                               ? AppColors.backgroundDark
                               : AppColors.primaryGreenSurface,
                           side: BorderSide(
-                            color: AppColors.primaryGreen
-                                .withValues(alpha: 0.25),
+                            color: AppColors.primaryGreen.withValues(
+                              alpha: 0.25,
+                            ),
                           ),
-                          avatar: const Icon(Icons.eco_rounded,
-                              size: 14, color: AppColors.primaryGreen),
+                          avatar: const Icon(
+                            Icons.eco_rounded,
+                            size: 14,
+                            color: AppColors.primaryGreen,
+                          ),
                         );
                       }).toList(),
                     ),
@@ -357,8 +370,11 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                             ),
                             child: Row(
                               children: [
-                                Icon(farm.waterSource.icon(),
-                                    color: AppColors.flowBlue, size: 18),
+                                Icon(
+                                  farm.waterSource.icon(),
+                                  color: AppColors.flowBlue,
+                                  size: 18,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Column(
@@ -409,8 +425,10 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                                 color: isDark
                                     ? AppColors.backgroundDark
                                     : (farm.hasSolarPower
-                                        ? const Color(0xFFFEF3C7) // Amber tint
-                                        : AppColors.backgroundLight),
+                                          ? const Color(
+                                              0xFFFEF3C7,
+                                            ) // Amber tint
+                                          : AppColors.backgroundLight),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
@@ -442,11 +460,11 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                                         Text(
                                           farm.hasSolarPower
                                               ? (isArabic
-                                                  ? 'طاقة شمسية'
-                                                  : 'Solar Hybrid')
+                                                    ? 'طاقة شمسية'
+                                                    : 'Solar Hybrid')
                                               : (isArabic
-                                                  ? 'شبكة عادية'
-                                                  : 'Grid Power'),
+                                                    ? 'شبكة عادية'
+                                                    : 'Grid Power'),
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w700,
@@ -505,7 +523,9 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                   color: isDark ? AppColors.cardDark : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: farm.installationStatus.color().withValues(alpha: 0.5),
+                    color: farm.installationStatus.color().withValues(
+                      alpha: 0.5,
+                    ),
                   ),
                 ),
                 child: Column(
@@ -553,9 +573,12 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                     if (linkedRequest != null) ...[
                       Text(
                         isArabic
-                          ? 'طلب المعاينة المسجل: ${linkedRequest.id}'
-                          : 'Linked Request: ${linkedRequest.id}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            ? 'طلب المعاينة المسجل: ${linkedRequest.id}'
+                            : 'Linked Request: ${linkedRequest.id}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton.icon(
@@ -563,7 +586,8 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                           foregroundColor: AppColors.flowBlue,
                           side: const BorderSide(color: AppColors.flowBlue),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         icon: const Icon(Icons.arrow_forward_rounded, size: 16),
                         label: Text(AppStrings.viewInspectionDetails(context)),
@@ -648,7 +672,10 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.primaryGreen,
                     ),
-                    icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                    icon: const Icon(
+                      Icons.add_circle_outline_rounded,
+                      size: 18,
+                    ),
                     label: Text(
                       AppStrings.addZone(context),
                       style: const TextStyle(fontWeight: FontWeight.bold),
@@ -676,8 +703,11 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                   child: Center(
                     child: Column(
                       children: [
-                        const Icon(Icons.water_drop_outlined,
-                            size: 40, color: Colors.grey),
+                        const Icon(
+                          Icons.water_drop_outlined,
+                          size: 40,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           isArabic
@@ -745,14 +775,19 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                               const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.flowBlue
-                                      .withValues(alpha: 0.15),
+                                  color: AppColors.flowBlue.withValues(
+                                    alpha: 0.15,
+                                  ),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  isArabic ? 'بيانات تجريبية' : 'Demo Telemetry',
+                                  isArabic
+                                      ? 'بيانات تجريبية'
+                                      : 'Demo Telemetry',
                                   style: const TextStyle(
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
@@ -835,7 +870,9 @@ class _DetailStatBox extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 10,
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

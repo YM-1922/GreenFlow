@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/backend/firebase_realtime_service.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/status_badge.dart';
@@ -67,42 +68,57 @@ class EnvironmentalMonitoringSection extends StatelessWidget {
 
         const SizedBox(height: 14),
 
-        // 4 Environmental Cards Grid
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final cardWidth = (constraints.maxWidth - 12) / 2;
+        // 4 Environmental Cards Grid with Realtime Firebase/Simulation stream
+        StreamBuilder<Map<String, dynamic>>(
+          stream: FirebaseRealtimeService.instance.streamTelemetry(),
+          initialData: FirebaseRealtimeService.instance.getTelemetry(),
+          builder: (context, snapshot) {
+            final telemetry = snapshot.data ?? {};
+            final liveMoisture = (telemetry['soilMoisture'] as num?)?.toDouble() ?? metrics.soilMoisture;
+            final liveTemp = (telemetry['temperature'] as num?)?.toDouble() ?? metrics.temperatureCelsius;
+            final liveHum = (telemetry['humidity'] as num?)?.toDouble() ?? metrics.airHumidity;
 
-            return Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                // 1. Soil Moisture Card
-                _SoilMoistureCard(
-                  width: cardWidth,
-                  moisture: metrics.soilMoisture,
-                  status: metrics.soilMoistureStatus,
-                ),
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final cardWidth = (constraints.maxWidth - 12) / 2;
 
-                // 2. Temperature Card
-                _TemperatureCard(
-                  width: cardWidth,
-                  temperature: metrics.temperatureCelsius,
-                  isWarning: metrics.isHighTemperatureWarning,
-                ),
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    // 1. Soil Moisture Card
+                    _SoilMoistureCard(
+                      width: cardWidth,
+                      moisture: liveMoisture,
+                      status: liveMoisture < 30.0
+                          ? (isArabic ? 'منخفض (بحاجة للري)' : 'Low (Water Needed)')
+                          : (liveMoisture >= 60.0
+                              ? (isArabic ? 'رطب / مشبع' : 'Optimal / Moist')
+                              : metrics.soilMoistureStatus),
+                    ),
 
-                // 3. Air Humidity Card
-                _HumidityCard(
-                  width: cardWidth,
-                  humidity: metrics.airHumidity,
-                ),
+                    // 2. Temperature Card
+                    _TemperatureCard(
+                      width: cardWidth,
+                      temperature: liveTemp,
+                      isWarning: liveTemp >= 35.0,
+                    ),
 
-                // 4. Water Consumption Card
-                _WaterConsumptionCard(
-                  width: cardWidth,
-                  liters: metrics.dailyWaterConsumptionLiters,
-                  vsYesterday: metrics.vsYesterdayPercent,
-                ),
-              ],
+                    // 3. Air Humidity Card
+                    _HumidityCard(
+                      width: cardWidth,
+                      humidity: liveHum,
+                    ),
+
+                    // 4. Water Consumption Card
+                    _WaterConsumptionCard(
+                      width: cardWidth,
+                      liters: metrics.dailyWaterConsumptionLiters,
+                      vsYesterday: metrics.vsYesterdayPercent,
+                    ),
+                  ],
+                );
+              },
             );
           },
         ),

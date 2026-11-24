@@ -1,7 +1,7 @@
 /// Admin domain entities: user roles, app user, and permission matrix.
 library;
 
-enum UserRole { systemAdmin, farmOwner }
+enum UserRole { systemAdmin, farmOwner, technician, farmWorker, financeManager }
 
 extension UserRoleLabel on UserRole {
   String get labelEn {
@@ -9,16 +9,28 @@ extension UserRoleLabel on UserRole {
       case UserRole.systemAdmin:
         return 'System Admin';
       case UserRole.farmOwner:
-        return 'Farmer';
+        return 'Farm Owner';
+      case UserRole.technician:
+        return 'Field Technician';
+      case UserRole.farmWorker:
+        return 'Agricultural Worker';
+      case UserRole.financeManager:
+        return 'Finance Manager';
     }
   }
 
   String get labelAr {
     switch (this) {
       case UserRole.systemAdmin:
-        return 'مسؤول النظام';
+        return 'مدير النظام';
       case UserRole.farmOwner:
-        return 'مزارع';
+        return 'مالك مزرعة';
+      case UserRole.technician:
+        return 'فني ميداني';
+      case UserRole.farmWorker:
+        return 'عامل زراعي';
+      case UserRole.financeManager:
+        return 'مسؤول مالي';
     }
   }
 }
@@ -51,9 +63,15 @@ class PermissionMatrix {
   const PermissionMatrix._();
 
   static bool canManageUsers(UserRole role) => role == UserRole.systemAdmin;
-  static bool canManageFarms(UserRole role) => true;
-  static bool canControlIrrigation(UserRole role) => true;
-  static bool canApproveQuotations(UserRole role) => role == UserRole.systemAdmin;
+  static bool canManageFarms(UserRole role) =>
+      role == UserRole.systemAdmin || role == UserRole.farmOwner;
+  static bool canControlIrrigation(UserRole role) =>
+      role == UserRole.systemAdmin ||
+      role == UserRole.farmOwner ||
+      role == UserRole.farmWorker;
+  static bool canApproveQuotations(UserRole role) =>
+      role == UserRole.systemAdmin || role == UserRole.financeManager;
   static bool canViewAnalytics(UserRole role) => true;
-  static bool canManageDevices(UserRole role) => role == UserRole.systemAdmin;
+  static bool canManageDevices(UserRole role) =>
+      role == UserRole.systemAdmin || role == UserRole.technician;
 }

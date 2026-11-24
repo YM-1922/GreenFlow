@@ -357,6 +357,10 @@ class FarmEntity {
   final String? imageUrl;
   final String ownerUserId;
 
+  /// Total connected IoT sensor and actuator nodes for this farm
+  int get devices => zones.isEmpty ? 4 : zones.fold(0, (sum, z) => sum + z.sensorNodesCount + z.valveCount);
+  int get devicesCount => devices;
+
   const FarmEntity({
     required this.id,
     required this.name,
@@ -416,6 +420,64 @@ class FarmEntity {
       ownerUserId: ownerUserId ?? this.ownerUserId,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'location': location,
+    'area': area,
+    'areaUnit': areaUnit.name,
+    'treesCount': treesCount,
+    'crops': crops,
+    'irrigationType': irrigationType.name,
+    'waterSource': waterSource.name,
+    'healthStatus': healthStatus.name,
+    'installationStatus': installationStatus.name,
+    'notes': notes,
+    'zones': zones.map((z) => z.toJson()).toList(),
+    'createdAt': createdAt.toIso8601String(),
+    'hasSolarPower': hasSolarPower,
+    'imageUrl': imageUrl,
+    'ownerUserId': ownerUserId,
+  };
+
+  factory FarmEntity.fromJson(Map<String, dynamic> json) => FarmEntity(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    location: json['location'] as String,
+    area: (json['area'] as num).toDouble(),
+    areaUnit: AreaUnit.values.firstWhere(
+      (e) => e.name == json['areaUnit'],
+      orElse: () => AreaUnit.feddan,
+    ),
+    treesCount: json['treesCount'] as int? ?? 0,
+    crops: (json['crops'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+    irrigationType: IrrigationType.values.firstWhere(
+      (e) => e.name == json['irrigationType'],
+      orElse: () => IrrigationType.drip,
+    ),
+    waterSource: FarmWaterSource.values.firstWhere(
+      (e) => e.name == json['waterSource'],
+      orElse: () => FarmWaterSource.deepWell,
+    ),
+    healthStatus: FarmHealthStatus.values.firstWhere(
+      (e) => e.name == json['healthStatus'],
+      orElse: () => FarmHealthStatus.good,
+    ),
+    installationStatus: InstallationStatus.values.firstWhere(
+      (e) => e.name == json['installationStatus'],
+      orElse: () => InstallationStatus.notInspected,
+    ),
+    notes: json['notes'] as String? ?? '',
+    zones: (json['zones'] as List<dynamic>?)
+            ?.map((e) => IrrigationZoneEntity.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [],
+    createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+    hasSolarPower: json['hasSolarPower'] as bool? ?? true,
+    imageUrl: json['imageUrl'] as String?,
+    ownerUserId: json['ownerUserId'] as String? ?? 'usr-farmer-01',
+  );
 }
 
 /// Individual irrigation zone within a farm.
@@ -479,6 +541,36 @@ class IrrigationZoneEntity {
       isActive: isActive ?? this.isActive,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'farmId': farmId,
+    'name': name,
+    'area': area,
+    'cropType': cropType,
+    'treesCount': treesCount,
+    'waterRequirementLitersPerDay': waterRequirementLitersPerDay,
+    'soilMoisturePercentage': soilMoisturePercentage,
+    'soilType': soilType,
+    'valveCount': valveCount,
+    'sensorNodesCount': sensorNodesCount,
+    'isActive': isActive,
+  };
+
+  factory IrrigationZoneEntity.fromJson(Map<String, dynamic> json) => IrrigationZoneEntity(
+    id: json['id'] as String,
+    farmId: json['farmId'] as String,
+    name: json['name'] as String,
+    area: (json['area'] as num).toDouble(),
+    cropType: json['cropType'] as String,
+    treesCount: json['treesCount'] as int? ?? 0,
+    waterRequirementLitersPerDay: (json['waterRequirementLitersPerDay'] as num).toDouble(),
+    soilMoisturePercentage: (json['soilMoisturePercentage'] as num?)?.toDouble() ?? 42.0,
+    soilType: json['soilType'] as String? ?? 'Sandy Loam',
+    valveCount: json['valveCount'] as int? ?? 2,
+    sensorNodesCount: json['sensorNodesCount'] as int? ?? 3,
+    isActive: json['isActive'] as bool? ?? true,
+  );
 }
 
 /// Farm technical inspection request entity.

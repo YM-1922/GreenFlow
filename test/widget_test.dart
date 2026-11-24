@@ -107,10 +107,10 @@ void main() {
     expect(find.text('Farmer Ahmed'), findsOneWidget);
     expect(find.text('Welcome back,'), findsOneWidget);
 
-    // 2. Farm Summary
-    expect(find.text('Total Farms'), findsOneWidget);
-    expect(find.text('Total Trees'), findsOneWidget);
-    expect(find.text('IoT Devices'), findsOneWidget);
+    // 2. Farm Summary (Farms, Devices, Zones)
+    expect(find.text('Farms'), findsWidgets);
+    expect(find.text('Devices'), findsWidgets);
+    expect(find.text('Zones'), findsWidgets);
 
     // 3. Environmental Monitoring
     expect(find.text('Environmental Monitoring'), findsOneWidget);
@@ -167,7 +167,8 @@ void main() {
     );
 
     expect(find.text('المزارع أحمد'), findsOneWidget);
-    expect(find.text('إجمالي المزارع'), findsOneWidget);
+    expect(find.text('المزارع'), findsWidgets);
+    expect(find.text('مناطق الري'), findsWidgets);
     expect(find.text('رطوبة التربة'), findsOneWidget);
     expect(find.text('التحكم الذكي بالري'), findsOneWidget);
     expect(find.text('الرئيسية'), findsOneWidget);

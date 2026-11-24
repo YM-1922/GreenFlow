@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../farms/presentation/screens/farms_list_screen.dart';
+import '../../../analytics/presentation/screens/analytics_screen.dart';
+import '../../../devices/presentation/screens/devices_list_screen.dart';
 import '../../../irrigation/presentation/screens/irrigation_screen.dart';
+import '../../../profile/presentation/screens/profile_screen.dart';
 import '../widgets/green_flow_bottom_nav.dart';
 import 'farmer_home_content.dart';
-import 'farmer_monitoring_screen.dart';
-import 'farmer_more_hub_screen.dart';
 
 /// Controller scope enabling child widgets to switch tabs on the persistent Farmer Shell.
 class FarmerShellScope extends InheritedWidget {
@@ -83,17 +83,17 @@ class _FarmerShellState extends State<FarmerShell> {
             rootWidget = const FarmerHomeContent();
             break;
           case 1:
-            rootWidget = const FarmsListScreen();
+            rootWidget = const IrrigationScreen();
             break;
           case 2:
-            rootWidget = const FarmerMonitoringScreen();
+            rootWidget = const DevicesListScreen();
             break;
           case 3:
-            rootWidget = const IrrigationScreen();
+            rootWidget = const AnalyticsScreen();
             break;
           case 4:
           default:
-            rootWidget = const FarmerMoreHubScreen();
+            rootWidget = const ProfileScreen();
             break;
         }
 

@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "author": "Green Flow IoT Engineering Team",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht",
+      "top": -140,
+      "left": -120,
+      "attrs": { "temperature": "28", "humidity": "55" }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "soil_pot",
+      "top": 180,
+      "left": -140,
+      "attrs": { "value": "42" }
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "relay",
+      "top": 180,
+      "left": 160,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 300,
+      "left": 180,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "pump_led",
+      "top": 300,
+      "left": 250,
+      "attrs": { "color": "blue", "label": "PUMP" }
+    }
+  ],
+  "connections": [
+    [ "esp:GND.1", "dht:GND", "black", [ "v0" ] ],
+    [ "esp:3V3", "dht:VCC", "red", [ "v0" ] ],
+    [ "esp:15", "dht:SDA", "green", [ "v0" ] ],
+    [ "esp:GND.2", "soil_pot:GND", "black", [ "v0" ] ],
+    [ "esp:3V3", "soil_pot:VCC", "red", [ "v0" ] ],
+    [ "esp:34", "soil_pot:SIG", "orange", [ "v0" ] ],
+    [ "esp:GND.3", "relay:GND", "black", [ "v0" ] ],
+    [ "esp:5V", "relay:VCC", "red", [ "v0" ] ],
+    [ "esp:23", "relay:IN", "purple", [ "v0" ] ],
+    [ "esp:5V", "relay:COM", "red", [ "v0" ] ],
+    [ "relay:NO", "r1:1", "blue", [ "v0" ] ],
+    [ "r1:2", "pump_led:A", "blue", [ "v0" ] ],
+    [ "pump_led:C", "esp:GND.1", "black", [ "v0" ] ]
+  ],
+  "dependencies": {}
+}

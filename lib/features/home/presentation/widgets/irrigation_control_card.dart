@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../core/backend/firebase_realtime_service.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/status_badge.dart';
@@ -25,6 +27,7 @@ class _IrrigationControlCardState extends State<IrrigationControlCard>
   late bool _isPumpActive;
   late bool _isAutoMode;
   late final AnimationController _flowAnimationController;
+  StreamSubscription<bool>? _pumpSubscription;
 
   @override
   void initState() {
@@ -40,6 +43,20 @@ class _IrrigationControlCardState extends State<IrrigationControlCard>
     if (_isPumpActive) {
       _flowAnimationController.repeat();
     }
+
+    // Subscribe to live Realtime Database pump status updates
+    _pumpSubscription = FirebaseRealtimeService.instance.streamPumpStatus().listen((active) {
+      if (mounted && _isPumpActive != active) {
+        setState(() {
+          _isPumpActive = active;
+          if (_isPumpActive) {
+            _flowAnimationController.repeat();
+          } else {
+            _flowAnimationController.stop();
+          }
+        });
+      }
+    });
   }
 
   @override
@@ -58,13 +75,32 @@ class _IrrigationControlCardState extends State<IrrigationControlCard>
 
   @override
   void dispose() {
+    _pumpSubscription?.cancel();
     _flowAnimationController.dispose();
     super.dispose();
   }
 
   void _togglePump() {
+    final isAr = AppStrings.isArabic(context);
+
+    // Safe override: if smart auto mode is active, switch to manual mode so manual control executes without conflict
+    if (_isAutoMode) {
+      _isAutoMode = false;
+      FirebaseRealtimeService.instance.setAutoMode(false);
+    }
+
+    final targetPumpState = !_isPumpActive;
+    final res = FirebaseRealtimeService.instance.sendPumpCommand(turnOn: targetPumpState);
+
+    if (!res.success && res.message != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res.message!), backgroundColor: const Color(0xFFD97706)),
+      );
+      return;
+    }
+
     setState(() {
-      _isPumpActive = !_isPumpActive;
+      _isPumpActive = targetPumpState;
       if (_isPumpActive) {
         _flowAnimationController.repeat();
       } else {
@@ -79,12 +115,8 @@ class _IrrigationControlCardState extends State<IrrigationControlCard>
     widget.onStatusChanged?.call(updated);
 
     final msg = _isPumpActive
-        ? (AppStrings.isArabic(context)
-            ? 'تم تشغيل دورة الري (محاكاة تجريبية)'
-            : 'Irrigation cycle started (Demo simulation)')
-        : (AppStrings.isArabic(context)
-            ? 'تم إيقاف دورة الري (محاكاة تجريبية)'
-            : 'Irrigation cycle paused (Demo simulation)');
+        ? (isAr ? 'تم تشغيل دورة الري (تحكم يدوي)' : 'Irrigation cycle started (Manual Control)')
+        : (isAr ? 'تم إيقاف دورة الري (تحكم يدوي)' : 'Irrigation cycle paused (Manual Control)');
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -111,6 +143,8 @@ class _IrrigationControlCardState extends State<IrrigationControlCard>
     setState(() {
       _isAutoMode = auto;
     });
+
+    FirebaseRealtimeService.instance.toggleAutoMode(autoMode: auto);
 
     final updated = widget.initialStatus.copyWith(
       isPumpActive: _isPumpActive,

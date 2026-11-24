@@ -323,13 +323,13 @@ class _FarmAddEditScreenState extends State<FarmAddEditScreen> {
 
                 const SizedBox(height: 16),
 
-                // 4. Number of Trees
+                // 4. Irrigation Zones Count
                 CustomTextField(
-                  label: AppStrings.treesCount(context),
-                  hint: '2400',
+                  label: AppStrings.isArabic(context) ? 'عدد مناطق وقطاعات الري' : 'Number of Irrigation Zones',
+                  hint: '4',
                   controller: _treesController,
                   keyboardType: TextInputType.number,
-                  prefixIcon: Icons.park_rounded,
+                  prefixIcon: Icons.water_drop_rounded,
                   validator: (val) {
                     if (val == null || int.tryParse(val.trim()) == null) {
                       return AppStrings.enterValidNumber(context);

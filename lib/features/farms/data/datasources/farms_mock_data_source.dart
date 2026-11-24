@@ -1,6 +1,10 @@
+import 'dart:convert';
 import '../../../../core/auth/auth_service.dart';
 import '../../../../core/auth/permission_service.dart';
 import '../../../../core/auth/user_account.dart';
+import '../../../../core/backend/firebase_config.dart';
+import '../../../../core/backend/firestore_service.dart';
+import '../../../../core/utils/file_io.dart' as file_io;
 import '../../domain/entities/farm_entities.dart';
 
 /// In-memory mock data source for Farm Management and Inspection Requests.
@@ -18,6 +22,17 @@ class FarmsMockDataSource {
   late List<FarmInspectionRequestEntity> _inspectionRequests;
 
   void _initInitialData() {
+    // Attempt to load persisted farms from local storage
+    final content = file_io.readFileSync('.greenflow_farms_db.json');
+    if (content != null && content.trim().isNotEmpty) {
+      try {
+        final list = jsonDecode(content) as List<dynamic>;
+        _farms = list.map((e) => FarmEntity.fromJson(e as Map<String, dynamic>)).toList();
+        _initInspectionRequests();
+        return;
+      } catch (_) {}
+    }
+
     // 1. Initial Farms
     _farms = [
       FarmEntity(
@@ -174,6 +189,11 @@ class FarmsMockDataSource {
     ];
 
     // 2. Initial Inspection Requests
+    _initInspectionRequests();
+    _persistFarms();
+  }
+
+  void _initInspectionRequests() {
     _inspectionRequests = [
       FarmInspectionRequestEntity(
         id: 'INS-2026-081',
@@ -326,14 +346,26 @@ class FarmsMockDataSource {
     }
   }
 
+  void _persistFarms() {
+    try {
+      final list = _farms.map((f) => f.toJson()).toList();
+      file_io.writeFileSync('.greenflow_farms_db.json', jsonEncode(list));
+      for (final farm in _farms) {
+        FirestoreService.instance.setDocument(FirebaseConfig.colFarms, farm.id, farm.toJson());
+      }
+    } catch (_) {}
+  }
+
   void addFarm(FarmEntity farm) {
     _farms.insert(0, farm);
+    _persistFarms();
   }
 
   void updateFarm(FarmEntity updatedFarm) {
     final index = _farms.indexWhere((f) => f.id == updatedFarm.id);
     if (index != -1) {
       _farms[index] = updatedFarm;
+      _persistFarms();
     }
   }
 
@@ -346,7 +378,9 @@ class FarmsMockDataSource {
     }
     final initialLength = _farms.length;
     _farms.removeWhere((f) => f.id == farmId);
-    return _farms.length < initialLength;
+    final deleted = _farms.length < initialLength;
+    if (deleted) _persistFarms();
+    return deleted;
   }
 
   // --- Zones Operations ---

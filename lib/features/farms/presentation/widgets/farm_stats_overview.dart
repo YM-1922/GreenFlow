@@ -8,10 +8,7 @@ import '../../domain/entities/farm_entities.dart';
 class FarmStatsOverview extends StatelessWidget {
   final List<FarmEntity> farms;
 
-  const FarmStatsOverview({
-    super.key,
-    required this.farms,
-  });
+  const FarmStatsOverview({super.key, required this.farms});
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +17,6 @@ class FarmStatsOverview extends StatelessWidget {
 
     final totalFarms = farms.length;
     final totalArea = farms.fold<double>(0.0, (sum, f) => sum + f.area);
-    final totalTrees = farms.fold<int>(0, (sum, f) => sum + f.treesCount);
     final totalZones = farms.fold<int>(0, (sum, f) => sum + f.zones.length);
 
     return LayoutBuilder(
@@ -53,13 +49,13 @@ class FarmStatsOverview extends StatelessWidget {
               isDark: isDark,
             ),
 
-            // 3. Total Trees
+            // 3. Connected IoT Devices
             _StatCard(
               width: cardWidth,
-              title: AppStrings.totalTrees(context),
-              value: '$totalTrees',
-              unit: isArabic ? 'شجرة ونخلة' : 'Trees/Palms',
-              icon: Icons.park_rounded,
+              title: isArabic ? 'أجهزة الاستشعار' : 'Connected Devices',
+              value: '${farms.fold<int>(0, (sum, f) => sum + f.devices)}',
+              unit: isArabic ? 'عقدة نشطة' : 'IoT Nodes',
+              icon: Icons.sensors_rounded,
               color: const Color(0xFF10B981),
               isDark: isDark,
             ),
@@ -138,7 +134,9 @@ class _StatCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                  color: isDark
+                      ? AppColors.textMutedDark
+                      : AppColors.textMutedLight,
                 ),
               ),
             ],
@@ -149,7 +147,9 @@ class _StatCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
             ),
           ),
           const SizedBox(height: 2),
@@ -158,7 +158,9 @@ class _StatCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

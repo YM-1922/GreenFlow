@@ -25,24 +25,24 @@ class GreenFlowBottomNav extends StatelessWidget {
         activeIcon: Icons.grid_view_rounded,
       ),
       _NavItem(
-        label: AppStrings.navFarms(context),
-        icon: Icons.landscape_outlined,
-        activeIcon: Icons.landscape_rounded,
-      ),
-      _NavItem(
-        label: AppStrings.navMonitoring(context),
-        icon: Icons.sensors_outlined,
-        activeIcon: Icons.sensors_rounded,
-      ),
-      _NavItem(
         label: AppStrings.navIrrigation(context),
         icon: Icons.water_drop_outlined,
         activeIcon: Icons.water_drop_rounded,
       ),
       _NavItem(
-        label: AppStrings.navMore(context),
-        icon: Icons.widgets_outlined,
-        activeIcon: Icons.widgets_rounded,
+        label: AppStrings.navDevices(context),
+        icon: Icons.sensors_outlined,
+        activeIcon: Icons.sensors_rounded,
+      ),
+      _NavItem(
+        label: AppStrings.navReports(context),
+        icon: Icons.bar_chart_outlined,
+        activeIcon: Icons.bar_chart_rounded,
+      ),
+      _NavItem(
+        label: AppStrings.navAccount(context),
+        icon: Icons.person_outline_rounded,
+        activeIcon: Icons.person_rounded,
       ),
     ];
 

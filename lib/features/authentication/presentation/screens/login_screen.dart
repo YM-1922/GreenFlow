@@ -109,6 +109,18 @@ class _LoginScreenState extends State<LoginScreen> {
         username = 'farmer_ahmed';
         password = 'Farmer@2026';
         break;
+      case UserRole.technician:
+        username = 'technician_omar';
+        password = 'Tech@2026';
+        break;
+      case UserRole.farmWorker:
+        username = 'worker_fathy';
+        password = 'Worker@2026';
+        break;
+      case UserRole.financeManager:
+        username = 'finance_layla';
+        password = 'Finance@2026';
+        break;
     }
 
     setState(() {

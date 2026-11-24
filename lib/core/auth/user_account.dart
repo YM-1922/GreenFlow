@@ -1,26 +1,41 @@
 /// Centralized User Roles, Account Statuses, and Unified User Account Entity.
 library;
 
-/// The two primary platform roles supported in Green Flow: Super Admin and Farmer.
+/// The primary business roles supported across Green Flow.
 enum UserRole {
   superAdmin,
-  farmOwner;
+  farmOwner,
+  technician,
+  farmWorker,
+  financeManager;
 
   String get labelEn {
     switch (this) {
       case UserRole.superAdmin:
         return 'Super Admin';
       case UserRole.farmOwner:
-        return 'Farmer';
+        return 'Farm Owner';
+      case UserRole.technician:
+        return 'Field Technician';
+      case UserRole.farmWorker:
+        return 'Agricultural Worker';
+      case UserRole.financeManager:
+        return 'Finance Manager';
     }
   }
 
   String get labelAr {
     switch (this) {
       case UserRole.superAdmin:
-        return 'المدير العام للنظام (Super Admin)';
+        return 'مدير النظام';
       case UserRole.farmOwner:
-        return 'مزارع (Farmer)';
+        return 'مالك مزرعة';
+      case UserRole.technician:
+        return 'فني ميداني';
+      case UserRole.farmWorker:
+        return 'عامل زراعي';
+      case UserRole.financeManager:
+        return 'مسؤول مالي';
     }
   }
 }

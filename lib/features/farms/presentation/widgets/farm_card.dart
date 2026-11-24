@@ -9,21 +9,19 @@ class FarmCard extends StatelessWidget {
   final FarmEntity farm;
   final VoidCallback onTap;
 
-  const FarmCard({
-    super.key,
-    required this.farm,
-    required this.onTap,
-  });
+  const FarmCard({super.key, required this.farm, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final isArabic = AppStrings.isArabic(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final areaUnitLabel =
-        isArabic ? farm.areaUnit.labelAr() : farm.areaUnit.labelEn();
-    final healthLabel =
-        isArabic ? farm.healthStatus.labelAr() : farm.healthStatus.labelEn();
+    final areaUnitLabel = isArabic
+        ? farm.areaUnit.labelAr()
+        : farm.areaUnit.labelEn();
+    final healthLabel = isArabic
+        ? farm.healthStatus.labelAr()
+        : farm.healthStatus.labelEn();
     final installationLabel = isArabic
         ? farm.installationStatus.labelAr()
         : farm.installationStatus.labelEn();
@@ -146,19 +144,23 @@ class FarmCard extends StatelessWidget {
                   Container(
                     width: 1,
                     height: 24,
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    color: isDark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
                   ),
                   _MetricPill(
-                    label: isArabic ? 'الأشجار' : 'Trees',
-                    value: '${farm.treesCount}',
-                    icon: Icons.park_rounded,
+                    label: isArabic ? 'الأجهزة' : 'Devices',
+                    value: '${farm.devices}',
+                    icon: Icons.memory_rounded,
                     color: AppColors.primaryGreen,
                     isDark: isDark,
                   ),
                   Container(
                     width: 1,
                     height: 24,
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    color: isDark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
                   ),
                   _MetricPill(
                     label: isArabic ? 'المناطق' : 'Zones',
@@ -179,8 +181,10 @@ class FarmCard extends StatelessWidget {
               runSpacing: 6,
               children: farm.crops.map((crop) {
                 return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primaryGreenSurface,
                     borderRadius: BorderRadius.circular(8),
@@ -222,11 +226,13 @@ class FarmCard extends StatelessWidget {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: farm.installationStatus
-                              .color()
-                              .withValues(alpha: 0.12),
+                          color: farm.installationStatus.color().withValues(
+                            alpha: 0.12,
+                          ),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -257,17 +263,23 @@ class FarmCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 4),
+                            horizontal: 6,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF59E0B)
-                                .withValues(alpha: 0.12),
+                            color: const Color(
+                              0xFFF59E0B,
+                            ).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.wb_sunny_rounded,
-                                  size: 12, color: Color(0xFFF59E0B)),
+                              Icon(
+                                Icons.wb_sunny_rounded,
+                                size: 12,
+                                color: Color(0xFFF59E0B),
+                              ),
                               SizedBox(width: 3),
                               Text(
                                 'Solar',
